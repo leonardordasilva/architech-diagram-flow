@@ -33,7 +33,8 @@ export default function UpgradeModal({ open, onOpenChange, featureName, descript
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (error || !data?.url) throw new Error(error?.message || t('upgrade.checkoutError'));
-      window.location.href = data.url;
+      const top = window.top || window;
+      top.location.href = data.url;
     } catch (err: any) {
       toast({ title: t('upgrade.checkoutError'), description: err.message, variant: 'destructive' });
       setLoading(null);
