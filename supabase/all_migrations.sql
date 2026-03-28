@@ -1,3 +1,24 @@
+-- ============================================================
+-- all_migrations.sql — Consolidated schema for AchiTech Diagram Flow
+-- ============================================================
+-- This file is the SINGLE SOURCE OF TRUTH for the database schema.
+-- It concatenates every migration in chronological order.
+--
+-- PURPOSE:
+--   • Quick reference for developers reviewing the full schema
+--   • Basis for rebuilding the database from scratch in a new environment
+--   • Audit trail of structural changes
+--
+-- RULES:
+--   1. Never edit SQL blocks directly — always create a new migration file
+--   2. After each migration, append the new SQL here with a separator comment
+--   3. Keep migration separators in chronological order
+--
+-- Last updated: 2026-03-28 (PRD-0022)
+-- ============================================================
+
+
+-- ── migration: 01_create_diagrams_table.sql ──────────────────────────────────
 
 CREATE TABLE public.diagrams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,6 +50,9 @@ CREATE POLICY "Authenticated users can insert" ON public.diagrams
 -- Enable realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.diagrams;
 
+
+-- ── migration: 02_add_is_shared_and_share_token_fix.sql ──────────────────────
+
 -- Add is_shared column (default false so existing diagrams are private)
 ALTER TABLE public.diagrams ADD COLUMN is_shared boolean NOT NULL DEFAULT false;
 
@@ -48,6 +72,9 @@ SET search_path = public
 AS $$
   SELECT * FROM diagrams WHERE share_token = token AND is_shared = true LIMIT 1;
 $$;
+
+
+-- ── migration: 03_create_profiles_and_diagram_shares.sql ─────────────────────
 
 -- 1. Profiles table for user lookup by email
 CREATE TABLE public.profiles (
@@ -151,6 +178,9 @@ INSERT INTO public.profiles (id, email)
 SELECT id, email FROM auth.users
 ON CONFLICT (id) DO NOTHING;
 
+
+-- ── migration: 04_epic1_secure_diagram_policies.sql ──────────────────────────
+
 -- Épico 1: Drop existing diagrams policies and create new secure ones
 DROP POLICY IF EXISTS "Authenticated users can insert" ON diagrams;
 DROP POLICY IF EXISTS "Owner full access" ON diagrams;
@@ -210,6 +240,9 @@ ON diagrams FOR DELETE
 TO authenticated
 USING (owner_id = auth.uid());
 
+
+-- ── migration: 05_epic7_secure_diagram_shares_policies.sql ───────────────────
+
 -- Épico 7: Drop existing diagram_shares policies and create new secure ones
 DROP POLICY IF EXISTS "Owner manages shares" ON diagram_shares;
 DROP POLICY IF EXISTS "Shared user can see own shares" ON diagram_shares;
@@ -246,6 +279,10 @@ USING (
   owner_id = auth.uid()
   OR shared_with_id = auth.uid()
 );
+
+
+-- ── migration: 06_create_ai_requests.sql ─────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS public.ai_requests (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL,
@@ -266,7 +303,12 @@ CREATE POLICY "Users can read own requests"
   USING (user_id = auth.uid());
 
 CREATE INDEX idx_ai_requests_rate_limit
-  ON public.ai_requests (user_id, function_name, created_at DESC);-- Security definer functions to avoid infinite recursion in RLS policies
+  ON public.ai_requests (user_id, function_name, created_at DESC);
+
+
+-- ── migration: 07_security_definer_helpers_and_update_policy_fix.sql ─────────
+
+-- Security definer functions to avoid infinite recursion in RLS policies
 
 CREATE OR REPLACE FUNCTION public.get_diagram_owner(diagram_id uuid)
 RETURNS uuid
@@ -315,11 +357,21 @@ CREATE POLICY "diagrams_update_policy"
       AND owner_id = public.get_diagram_owner(diagrams.id)
       AND title = public.get_diagram_title(diagrams.id)
     )
-  );-- A01: Index for ai_requests rate-limit queries
+  );
+
+
+-- ── migration: 08_ai_requests_index_and_retention.sql ────────────────────────
+
+-- A01: Index for ai_requests rate-limit queries
 CREATE INDEX IF NOT EXISTS idx_ai_requests_user_created ON public.ai_requests (user_id, created_at);
 
 -- A01: Retention comment (5 minutes)
-COMMENT ON TABLE public.ai_requests IS 'Rate-limit tracking. Rows older than 5 minutes are purged by edge functions.';-- Migration: adjust index on ai_requests for rate-limit query performance
+COMMENT ON TABLE public.ai_requests IS 'Rate-limit tracking. Rows older than 5 minutes are purged by edge functions.';
+
+
+-- ── migration: 09_ai_requests_index_optimization.sql ─────────────────────────
+
+-- Migration: adjust index on ai_requests for rate-limit query performance
 -- PRD-12 / R4-INF-01
 
 DROP INDEX IF EXISTS idx_ai_requests_user_created;
@@ -333,6 +385,10 @@ COMMENT ON TABLE ai_requests IS
    purgados proativamente pela Edge Function generate-diagram.
    O índice idx_ai_requests_user_created é crítico para
    performance das queries de contagem por usuário.';
+
+
+-- ── migration: 10_add_metadata_columns.sql ───────────────────────────────────
+
 -- 1a. Índice composto para rate limiting na ai_requests
 CREATE INDEX IF NOT EXISTS idx_ai_requests_user_created
 ON public.ai_requests (user_id, created_at DESC);
@@ -341,6 +397,10 @@ ON public.ai_requests (user_id, created_at DESC);
 ALTER TABLE public.diagrams
   ADD COLUMN IF NOT EXISTS node_count integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS edge_count integer NOT NULL DEFAULT 0;
+
+
+-- ── migration: 11_r10_fix_select_policy.sql ──────────────────────────────────
+
 -- R10: Fix SELECT policy — remove OR is_shared = true
 -- The is_shared column + share_token are used by the SECURITY DEFINER
 -- function get_diagram_by_share_token which bypasses RLS entirely.
@@ -360,12 +420,20 @@ USING (
     AND diagram_shares.shared_with_id = auth.uid()
   )
 );
+
+
+-- ── migration: 12_r7_owner_id_index.sql ──────────────────────────────────────
+
 -- R7: Add missing index on diagrams.owner_id
 -- All diagram list queries filter by owner_id; without this index
 -- PostgreSQL performs a sequential scan on the diagrams table.
 
 CREATE INDEX IF NOT EXISTS idx_diagrams_owner_id
 ON public.diagrams (owner_id);
+
+
+-- ── migration: 13_r9_soft_delete.sql ─────────────────────────────────────────
+
 -- R9: Soft delete for diagrams
 -- Replaces hard DELETE with a deleted_at timestamp update so that
 -- accidental deletions can be recovered via the Supabase dashboard.
@@ -420,6 +488,10 @@ CREATE POLICY "diagrams_update_policy"
         AND diagram_shares.shared_with_id = auth.uid()
     )
   );
+
+
+-- ── migration: 14_r6_trigram_index.sql ───────────────────────────────────────
+
 -- R6: GIN trigram index on profiles.email for fast ILIKE searches
 -- Without this, searchUsersByEmail with ILIKE '%term%' does a sequential scan.
 
@@ -430,6 +502,10 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_profiles_email_trgm
   ON public.profiles
   USING GIN (email gin_trgm_ops);
+
+
+-- ── migration: 15_r3_purge_function.sql ──────────────────────────────────────
+
 -- R3: Função para purgar diagramas soft-deleted com mais de 30 dias
 -- Pode ser chamada manualmente via Supabase SQL Editor ou agendada via pg_cron
 
@@ -471,6 +547,10 @@ COMMENT ON FUNCTION public.purge_old_soft_deleted_diagrams()
 CREATE INDEX IF NOT EXISTS idx_diagrams_deleted_at
   ON public.diagrams (deleted_at)
   WHERE deleted_at IS NOT NULL;
+
+
+-- ── migration: 16_a1_pg_cron_schedule.sql ────────────────────────────────────
+
 -- A1: Habilitar pg_cron e agendar purge semanal de diagramas soft-deleted
 --
 -- PRÉ-REQUISITO: A extensão pg_cron deve estar habilitada no projeto Supabase.
@@ -493,9 +573,11 @@ COMMENT ON EXTENSION pg_cron IS
   'Agendador de jobs. Job ativo: purge-deleted-diagrams (dom 03:00 UTC). '
   'Verificar jobs: SELECT * FROM cron.job; '
   'Verificar execuções: SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;';
--- ============================================================
+
+
+-- ── migration: 17_saas0001_billing_infrastructure.sql ────────────────────────
+
 -- saas0001: Billing infrastructure — subscriptions, plan_limits, profiles.plan, RPCs
--- ============================================================
 
 -- 1. Adiciona coluna plan na tabela profiles (cache desnormalizado)
 ALTER TABLE public.profiles
@@ -637,6 +719,10 @@ DROP TRIGGER IF EXISTS trg_subscriptions_updated_at ON public.subscriptions;
 CREATE TRIGGER trg_subscriptions_updated_at
   BEFORE UPDATE ON public.subscriptions
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+-- ── migration: 18_saas0003_workspaces.sql ────────────────────────────────────
+
 -- saas0003: Workspaces, gestão de membros e plano Team
 -- Cria as tabelas workspaces, workspace_members, workspace_invites,
 -- adiciona workspace_id em diagrams e atualiza as políticas RLS.
@@ -912,6 +998,10 @@ LANGUAGE sql STABLE SECURITY DEFINER AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_workspace_members(uuid) TO authenticated;
+
+
+-- ── migration: 19_b6_diagram_limit_trigger.sql ──────────────────────────────
+
 -- B6: Server-side trigger to enforce diagram count limit.
 -- Provides a second layer beyond the client-side check in useSaveDiagram.ts,
 -- protecting against race conditions and direct API access.
@@ -964,6 +1054,10 @@ CREATE TRIGGER enforce_diagram_limit
   BEFORE INSERT ON public.diagrams
   FOR EACH ROW
   EXECUTE FUNCTION public.check_diagram_limit_before_insert();
+
+
+-- ── migration: 20_i7_search_users_rpc.sql ────────────────────────────────────
+
 -- I7: RPC for user email search with server-side minimum-length validation.
 -- Moving the 3-char guard from the client to the DB prevents enumeration of
 -- all user emails via direct PostgREST table access.
@@ -996,6 +1090,10 @@ BEGIN
     LIMIT 20;
 END;
 $$;
+
+
+-- ── migration: 21_add_avatar_url.sql ─────────────────────────────────────────
+
 -- Add avatar_url column to profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS avatar_url text;
@@ -1048,6 +1146,10 @@ CREATE POLICY "Users can delete their own avatar"
     bucket_id = 'avatars'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
+
+
+-- ── migration: 22_fix_trigger_workspace_id.sql ──────────────────────────────
+
 -- Fix: trigger enforce_diagram_limit referenced NEW.workspace_id before the column existed.
 -- Depends on 20260322000001_add_workspaces.sql (adds workspace_id + workspaces table).
 
@@ -1103,6 +1205,10 @@ CREATE TRIGGER enforce_diagram_limit
   BEFORE INSERT ON public.diagrams
   FOR EACH ROW
   EXECUTE FUNCTION public.check_diagram_limit_before_insert();
+
+
+-- ── migration: 23_fix_workspace_members_recursion.sql ────────────────────────
+
 -- Fix: infinite recursion in workspace_members RLS policies.
 -- Policies on workspace_members that query workspace_members itself cause recursion.
 -- Solution: SECURITY DEFINER helper functions that bypass RLS.
@@ -1143,6 +1249,10 @@ DROP POLICY IF EXISTS "workspace_invites_owner_manage" ON public.workspace_invit
 CREATE POLICY "workspace_invites_owner_manage"
   ON public.workspace_invites FOR ALL
   USING (workspace_id IN (SELECT public.get_my_owner_workspace_ids()));
+
+
+-- ── migration: 24_fix_soft_delete_update_policy.sql ──────────────────────────
+
 -- Fix: soft-delete (PATCH deleted_at) returns 403 because the UPDATE policy
 -- uses `deleted_at IS NULL` in USING, which PostgreSQL also applies as an
 -- implicit WITH CHECK on the new row — after setting deleted_at the new row
@@ -1186,6 +1296,10 @@ CREATE POLICY "diagrams_update_policy"
       )
     )
   );
+
+
+-- ── migration: 25_soft_delete_rpc.sql ────────────────────────────────────────
+
 -- Fix: use a SECURITY DEFINER RPC for soft delete to bypass RLS UPDATE policy complexity.
 -- The UPDATE policy WITH CHECK causes 403 even with explicit WITH CHECK clause.
 -- This function validates ownership server-side and performs the soft delete directly.
@@ -1213,10 +1327,10 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.soft_delete_diagram(uuid, uuid) TO authenticated;
 
--- ============================================================
+
+-- ── migration: 26_prd0021_audit_remediation.sql ──────────────────────────────
+
 -- PRD-0021: Remediação de riscos de auditoria técnica
--- Migration: 20260328193417
--- ============================================================
 
 -- ITEM 4: Fix permissive RLS SELECT policy on diagrams
 -- Remove OR share_token IS NOT NULL which allows any authenticated user to read any shared diagram
