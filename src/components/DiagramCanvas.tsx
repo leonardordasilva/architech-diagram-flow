@@ -9,9 +9,9 @@ import {
   MiniMap,
   BackgroundVariant,
   SelectionMode,
-  useReactFlow,
   type Connection,
 } from '@xyflow/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSnapGuides } from '@/hooks/useSnapGuides';
 import SnapGuideLines from '@/components/SnapGuideLines';
 import { toast } from '@/hooks/use-toast';
@@ -29,7 +29,6 @@ import { CanvasOverlays, type CanvasOverlaysHandle } from '@/components/CanvasOv
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { loadDiagramById } from '@/services/diagramService';
 import { useSaveDiagram } from '@/hooks/useSaveDiagram';
 import { useRealtimeCollab } from '@/hooks/useRealtimeCollab';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -50,6 +49,13 @@ import { Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import StatusBar from '@/components/StatusBar';
+
+// Extracted hooks
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useThemeToggle } from '@/hooks/useThemeToggle';
+import { useInteractionMode } from '@/hooks/useInteractionMode';
+import { useDiagramRefresh } from '@/hooks/useDiagramRefresh';
+import { useAddNodeToCanvas } from '@/hooks/useAddNodeToCanvas';
 
 const nodeTypes = {
   service: ServiceNode,
@@ -76,33 +82,40 @@ interface DiagramCanvasProps {
 
 function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps) {
   const { t } = useTranslation();
-  const nodes = useDiagramStore((s) => s.nodes);
-  const edges = useDiagramStore((s) => s.edges);
-  const diagramName = useDiagramStore((s) => s.diagramName);
-  const diagramId = useDiagramStore((s) => s.currentDiagramId);
-  const isCollaborator = useDiagramStore((s) => s.isCollaborator);
-  const setDiagramName = useDiagramStore((s) => s.setDiagramName);
-  const onNodesChange = useDiagramStore((s) => s.onNodesChange);
-  const onEdgesChange = useDiagramStore((s) => s.onEdgesChange);
-  const onConnectAction = useDiagramStore((s) => s.onConnect);
-  const onNodeDragHandler = useDiagramStore((s) => s.onNodeDragHandler);
-  const addNode = useDiagramStore((s) => s.addNode);
-  const addNodesFromSource = useDiagramStore((s) => s.addNodesFromSource);
-  const deleteSelected = useDiagramStore((s) => s.deleteSelected);
-  const autoLayout = useDiagramStore((s) => s.autoLayout);
-  const autoLayoutELK = useDiagramStore((s) => s.autoLayoutELK);
-  const clearCanvas = useDiagramStore((s) => s.clearCanvas);
-  const loadDiagram = useDiagramStore((s) => s.loadDiagram);
 
-  const undo = useCallback(() => useDiagramStore.temporal.getState().undo(), []);
-  const redo = useCallback(() => useDiagramStore.temporal.getState().redo(), []);
+  // ITEM 6: Grouped Zustand selectors with useShallow
+  const { nodes, edges, diagramName, diagramId, isCollaborator } = useDiagramStore(
+    useShallow((s) => ({
+      nodes: s.nodes,
+      edges: s.edges,
+      diagramName: s.diagramName,
+      diagramId: s.currentDiagramId,
+      isCollaborator: s.isCollaborator,
+    })),
+  );
+
+  const { setDiagramName, onNodesChange, onEdgesChange, onConnect: onConnectAction, onNodeDragHandler, addNodesFromSource, deleteSelected, autoLayout, autoLayoutELK, clearCanvas, loadDiagram } = useDiagramStore(
+    useShallow((s) => ({
+      setDiagramName: s.setDiagramName,
+      onNodesChange: s.onNodesChange,
+      onEdgesChange: s.onEdgesChange,
+      onConnect: s.onConnect,
+      onNodeDragHandler: s.onNodeDragHandler,
+      addNodesFromSource: s.addNodesFromSource,
+      deleteSelected: s.deleteSelected,
+      autoLayout: s.autoLayout,
+      autoLayoutELK: s.autoLayoutELK,
+      clearCanvas: s.clearCanvas,
+      loadDiagram: s.loadDiagram,
+    })),
+  );
 
   const { user, signOut } = useAuth();
 
   // saas0001: plan limits
   const planLimits = usePlanLimits();
   // saas0003: workspace context
-  useWorkspace(); // populates workspaceStore
+  useWorkspace();
   const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureName, setUpgradeFeatureName] = useState('');
@@ -132,59 +145,32 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
     onDiagramLimitReached: () => openUpgradeModal('Diagramas ilimitados'),
   });
 
-  // UX-04: Initialize dark mode from localStorage or system preference
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('microflow_theme');
-    if (saved !== null) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-  const [refreshing, setRefreshing] = useState(false);
-  const [interactionMode, setInteractionMode] = useState<'pan' | 'select'>(
-    () => localStorage.getItem('microflow_interaction_mode') === 'select' ? 'select' : 'pan',
-  );
+  // Extracted hooks
+  const { darkMode, toggleDarkMode } = useThemeToggle();
+  const { interactionMode, handleSetInteractionMode } = useInteractionMode();
+  const { refreshing, handleRefreshDiagram, lastLoadedUpdatedAtRef } = useDiagramRefresh();
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const lastLoadedUpdatedAtRef = useRef<string | null>(null);
   const modalsRef = useRef<DiagramModalsHandle>(null);
   const overlaysRef = useRef<CanvasOverlaysHandle>(null);
+
+  const { handleAddNode } = useAddNodeToCanvas(reactFlowWrapper);
 
   const { guides, onNodeDrag, onNodeDragStop } = useSnapGuides(nodes);
   const { broadcastChanges, collaborators } = useRealtimeCollab(shareToken || null, planLimits.realtimeCollabEnabled);
   const { saveStatus } = useAutoSave();
-  const { screenToFlowPosition } = useReactFlow();
   const { handleExportPNG, handleExportSVG, handleExportMermaid, handleExportJSON } = useExportHandlers(darkMode, planLimits.watermarkEnabled);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, []);
+  const { handleKeyDown, undo, redo } = useKeyboardShortcuts({
+    onSave: () => handleSaveToCloudRef.current(),
+    onOpenShortcuts: () => modalsRef.current?.openShortcuts(),
+    onClearSelectedNode: () => overlaysRef.current?.clearSelectedNode(),
+    onClearContextMenu: () => overlaysRef.current?.clearContextMenu(),
+  });
 
   useEffect(() => {
     if (shareToken) broadcastChanges(nodes, edges);
   }, [nodes, edges, shareToken, broadcastChanges]);
-
-  const toggleDarkMode = useCallback(() => {
-    setDarkMode((prev) => {
-      const next = !prev;
-      document.documentElement.classList.toggle('dark', next);
-      localStorage.setItem('microflow_theme', next ? 'dark' : 'light');
-      return next;
-    });
-  }, []);
-
-  const handleSetInteractionMode = useCallback((mode: 'pan' | 'select') => {
-    setInteractionMode(mode);
-    localStorage.setItem('microflow_interaction_mode', mode);
-  }, []);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Delete') { deleteSelected(); overlaysRef.current?.clearSelectedNode(); }
-    if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
-    if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
-    if (e.ctrlKey && e.shiftKey && e.key === 'Z') { e.preventDefault(); redo(); }
-    if (e.ctrlKey && e.key === 's') { e.preventDefault(); handleSaveToCloudRef.current(); }
-    if (e.key === '?') modalsRef.current?.openShortcuts();
-    if (e.key === 'Escape') { overlaysRef.current?.clearSelectedNode(); overlaysRef.current?.clearContextMenu(); }
-  }, [deleteSelected, undo, redo]);
 
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: DiagramNode) => {
     event.preventDefault();
@@ -213,41 +199,6 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
     }
     onConnectAction(connection);
   }, [onConnectAction, nodes]);
-
-  const handleRefreshDiagram = useCallback(async () => {
-    if (!diagramId) { toast({ title: t('canvas.saveFirst') }); return; }
-    setRefreshing(true);
-    try {
-      const record = await loadDiagramById(diagramId);
-      if (!record) { toast({ title: t('canvas.notFound'), variant: 'destructive' }); return; }
-      if (record.updated_at === lastLoadedUpdatedAtRef.current) {
-        toast({ title: t('canvas.alreadyUpdated') });
-      } else {
-        const temporal = useDiagramStore.temporal.getState();
-        temporal.pause();
-        loadDiagram(record.nodes, record.edges);
-        if (record.title && record.title !== diagramName) setDiagramName(record.title);
-        temporal.resume();
-        lastLoadedUpdatedAtRef.current = record.updated_at;
-        toast({ title: t('canvas.updateSuccess') });
-      }
-    } catch { toast({ title: t('canvas.updateError'), variant: 'destructive' }); }
-    finally { setRefreshing(false); }
-  }, [diagramId, loadDiagram, diagramName, setDiagramName]);
-
-  const handleAddNode = useCallback((type: NodeType, subType?: string) => {
-    const wrapper = reactFlowWrapper.current;
-    if (wrapper) {
-      const rect = wrapper.getBoundingClientRect();
-      const pos = screenToFlowPosition({
-        x: rect.left + rect.width / 2 + (Math.random() - 0.5) * 80,
-        y: rect.top + rect.height / 2 + (Math.random() - 0.5) * 80,
-      });
-      addNode(type, subType, pos);
-    } else {
-      addNode(type, subType);
-    }
-  }, [screenToFlowPosition, addNode]);
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background" onKeyDown={handleKeyDown} tabIndex={0} role="application" aria-label="Editor de diagramas de arquitetura">
