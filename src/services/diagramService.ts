@@ -198,9 +198,11 @@ export async function loadDiagramById(id: string): Promise<DiagramRecord | null>
 }
 
 export async function deleteDiagram(id: string, ownerId: string): Promise<void> {
-  // R9: Soft delete via SECURITY DEFINER RPC to bypass RLS UPDATE policy complexity
   const { error } = await supabase
-    .rpc('soft_delete_diagram', { p_diagram_id: id, p_owner_id: ownerId });
+    .from('diagrams')
+    .delete()
+    .eq('id', id)
+    .eq('owner_id', ownerId);
   if (error) throw error;
 }
 

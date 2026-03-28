@@ -123,7 +123,7 @@ serve(async (req) => {
   }
 });
 
-async function updateStripeQuantity(serviceSupabase: ReturnType<typeof createClient>, workspaceId: string) {
+async function updateStripeQuantity(serviceSupabase: any, workspaceId: string) {
   try {
     const { data: workspace } = await serviceSupabase
       .from("workspaces")
