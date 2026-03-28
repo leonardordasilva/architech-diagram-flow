@@ -3,7 +3,6 @@ import type { DiagramNode, DiagramEdge } from '@/types/diagram';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import { DbDiagramNodesSchema, DbDiagramEdgesSchema } from '@/schemas/diagramSchema';
 import { encryptDiagramData, decryptDiagramData } from '@/services/cryptoService';
-import { encryptDiagramData, decryptDiagramData } from '@/services/cryptoService';
 import i18n from '@/i18n';
 
 /** Compute a SHA-256 hash of the serialized nodes+edges for integrity checks */
