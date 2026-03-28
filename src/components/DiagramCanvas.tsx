@@ -162,7 +162,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
   const { handleExportPNG, handleExportSVG, handleExportMermaid, handleExportJSON } = useExportHandlers(darkMode, planLimits.watermarkEnabled);
 
   const { handleKeyDown, undo, redo } = useKeyboardShortcuts({
-    onSave: () => handleSaveToCloudRef.current(),
+    onSave: () => handleSaveToCloudRef.current?.(),
     onOpenShortcuts: () => modalsRef.current?.openShortcuts(),
     onClearSelectedNode: () => overlaysRef.current?.clearSelectedNode(),
     onClearContextMenu: () => overlaysRef.current?.clearContextMenu(),
@@ -236,7 +236,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
           <>
             <DiagramHeader
               shareToken={shareToken}
-              diagramId={diagramId}
+              diagramId={diagramId ?? null}
               isCollaborator={isCollaborator}
               user={user}
               collaborators={collaborators}
