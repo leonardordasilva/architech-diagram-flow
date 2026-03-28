@@ -1,8 +1,11 @@
 import { memo, useState, useEffect } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Globe, Wifi, Share2, Lock, Hexagon, CreditCard, Database, BarChart3, Shield, Box } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { DiagramNodeData, ExternalCategory } from '@/types/diagram';
 import { useDiagramStore } from '@/store/diagramStore';
+
+const sanitize = (text: string) => DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
 
 const CATEGORY_ICONS: Record<ExternalCategory, React.ElementType> = {
   API: Globe,
@@ -74,11 +77,11 @@ const ExternalNode = memo(({ data, id, selected }: NodeProps) => {
           />
         ) : (
           <span className="text-sm font-semibold text-foreground cursor-pointer truncate" onDoubleClick={handleDoubleClick}>
-            {label}
+            {sanitize(label)}
           </span>
         )}
       </div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{displayLabel}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{sanitize(displayLabel)}</div>
 
       <Handle id="bottom-target" type="target" position={Position.Bottom} className={`!w-3 !h-3 !bg-[hsl(var(--node-external))] ${selected ? '' : '!opacity-0 !pointer-events-none'}`} />
       <Handle id="bottom-source" type="source" position={Position.Bottom} className={`!w-3 !h-3 !bg-[hsl(var(--node-external))] ${selected ? '' : '!opacity-0 !pointer-events-none'}`} />

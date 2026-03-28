@@ -105,12 +105,8 @@ serve(async (req) => {
     // ── Authentication ──────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
 
-    // Log for debugging (will appear in Supabase Logs)
-    console.log("Auth Header present:", !!authHeader);
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    console.log("SUPABASE_URL configured:", !!SUPABASE_URL);
-    console.log("SUPABASE_ANON_KEY configured:", !!SUPABASE_ANON_KEY);
 
     const jwt = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : null;
     if (!jwt) {
@@ -136,8 +132,6 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    console.log("Authenticated user:", userData.user.id);
 
     // ── Business logic ──────────────────────────────────────
     const body = await req.json();
