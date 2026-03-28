@@ -3,7 +3,17 @@ import type { DiagramNode, DiagramEdge } from '@/types/diagram';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import { DbDiagramNodesSchema, DbDiagramEdgesSchema } from '@/schemas/diagramSchema';
 import { encryptDiagramData, decryptDiagramData } from '@/services/cryptoService';
+import { encryptDiagramData, decryptDiagramData } from '@/services/cryptoService';
 import i18n from '@/i18n';
+
+/** Compute a SHA-256 hash of the serialized nodes+edges for integrity checks */
+async function computeContentHash(nodes: unknown[], edges: unknown[]): Promise<string> {
+  const payload = JSON.stringify({ nodes, edges });
+  const encoded = new TextEncoder().encode(payload);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Use Supabase generated type for rows
 type DiagramRow = Tables<'diagrams'>;
@@ -67,12 +77,14 @@ export async function saveDiagram(
   );
 
   if (existingId) {
+    const contentHash = await computeContentHash(nodes, edges);
     const updatePayload: TablesUpdate<'diagrams'> = {
       title,
       nodes: encrypted.nodes as unknown as Tables<'diagrams'>['nodes'],
       edges: encrypted.edges as unknown as Tables<'diagrams'>['edges'],
       node_count: nodes.length,
       edge_count: edges.length,
+      content_hash: contentHash,
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
@@ -96,12 +108,14 @@ export async function saveDiagram(
     };
   }
 
+  const contentHash = await computeContentHash(nodes, edges);
   const insertPayload: TablesInsert<'diagrams'> = {
     title,
     nodes: encrypted.nodes as unknown as Tables<'diagrams'>['nodes'],
     edges: encrypted.edges as unknown as Tables<'diagrams'>['edges'],
     node_count: nodes.length,
     edge_count: edges.length,
+    content_hash: contentHash,
     owner_id: ownerId,
     ...(workspaceId ? { workspace_id: workspaceId } : {}),
   };
@@ -250,9 +264,11 @@ export async function saveSharedDiagram(
     JSON.parse(JSON.stringify(nodes)),
     JSON.parse(JSON.stringify(edges)),
   );
+  const contentHash = await computeContentHash(nodes, edges);
   const updatePayload: TablesUpdate<'diagrams'> = {
     nodes: encrypted.nodes as unknown as Tables<'diagrams'>['nodes'],
     edges: encrypted.edges as unknown as Tables<'diagrams'>['edges'],
+    content_hash: contentHash,
     updated_at: new Date().toISOString(),
   };
   const { error } = await supabase
