@@ -150,6 +150,14 @@ serve(async (req) => {
       );
     }
 
+    // Rate limit check
+    if (!checkRateLimit(userData.user.id)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // ── Business logic ──────────────────────────────────────
     const body = await req.json();
     const { action, nodes, edges } = body as {
