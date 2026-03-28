@@ -147,7 +147,8 @@ export default function BillingModal({
         headers: { Authorization: `Bearer ${activeSession.access_token}` },
       });
       if (error || !data?.url) throw new Error(error?.message || t('billing.portalError'));
-      window.location.href = data.url;
+      const top = window.top || window;
+      top.location.href = data.url;
     } catch (err: any) {
       toast({ title: t('billing.portalError'), description: err.message, variant: 'destructive' });
       setPortalLoading(false);
