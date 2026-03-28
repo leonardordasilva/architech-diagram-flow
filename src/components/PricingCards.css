@@ -1,0 +1,140 @@
+/* M2: CSS custom properties for PricingCards.
+   PricingCards always renders on a dark (#0f1520) background (Landing + UpgradeModal).
+   Centralising colours here makes palette changes a single-line update. */
+:root {
+  --pc-surface: rgba(255, 255, 255, 0.04);
+  --pc-border: rgba(255, 255, 255, 0.12);
+  --pc-text-muted: #94a3b8;
+  --pc-text-dim: #64748b;
+  --pc-blue-accent: rgba(59, 130, 246, 0.18);
+  --pc-blue-text: #93c5fd;
+  --pc-orange: #f97316;
+  --pc-orange-dark: #ea580c;
+  --pc-blue: #3b82f6;
+  --pc-blue-dark: #2563eb;
+}
+
+/* ── Cycle toggle ── */
+.p-cycle-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+.p-cycle-btn-active {
+  background: var(--pc-blue-accent) !important;
+  color: var(--pc-blue-text) !important;
+}
+.p-cycle-btn-inactive {
+  background: transparent !important;
+  color: var(--pc-text-dim) !important;
+}
+.p-cycle-btn-inactive:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--pc-text-muted) !important;
+}
+
+/* ── Plan cards ── */
+.p-card {
+  transition: transform 0.28s ease, box-shadow 0.28s ease !important;
+  animation: fadeInUp 0.55s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.p-card:hover {
+  transform: translateY(-6px) !important;
+}
+
+/* ── CTA buttons ── */
+.p-btn-primary {
+  background: linear-gradient(135deg, var(--pc-orange), var(--pc-orange-dark));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+}
+.p-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ea6c00, #dc2626);
+  box-shadow: 0 0 28px rgba(249, 115, 22, 0.4), 0 6px 20px rgba(249, 115, 22, 0.2);
+  transform: translateY(-1px);
+}
+.p-btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.p-btn-outline {
+  background: var(--pc-surface);
+  color: #cbd5e1;
+  border: 1px solid var(--pc-border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  font-family: inherit;
+}
+.p-btn-outline:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+.p-btn-outline:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.p-btn-blue {
+  background: linear-gradient(135deg, var(--pc-blue), var(--pc-blue-dark));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  font-family: inherit;
+}
+.p-btn-blue:hover:not(:disabled) {
+  box-shadow: 0 0 28px rgba(59, 130, 246, 0.45), 0 6px 20px rgba(59, 130, 246, 0.2); /* intentional: rgba doesn't support CSS vars */
+  transform: translateY(-1px);
+}
+.p-btn-blue:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── Feature list items ── */
+.p-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--pc-text-muted);
+  line-height: 1.5;
+}

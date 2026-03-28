@@ -1,16 +1,28 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useAuth } from '@/hooks/useAuth';
+import DiagramCanvas from '@/components/DiagramCanvas';
+import AuthPage from '@/pages/Auth';
+import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
-  return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
-  );
+const Index = () => {
+  const { user, loading } = useAuth();
+  const { t } = useTranslation();
+
+  // UX-01: Loading state with animated Loader2 icon
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  return <DiagramCanvas />;
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;

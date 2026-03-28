@@ -1,0 +1,585 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "tryAgain": "Try again",
+    "close": "Close",
+    "waiting": "Please wait...",
+    "back": "Back"
+  },
+  "errors": {
+    "unexpected": "Unexpected error",
+    "unexpectedDesc": "Something went wrong. Try reloading the page.",
+    "networkOp": "Network or operation error",
+    "asyncFailed": "An async operation failed.",
+    "somethingWrong": "Something went wrong.",
+    "diagramRender": "Error rendering diagram",
+    "diagramRenderDesc": "An unexpected error occurred. Your data has been preserved in local auto-save.",
+    "reload": "Reload page"
+  },
+  "auth": {
+    "login": "Sign in",
+    "signup": "Sign up",
+    "logout": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
+    "backToLogin": "Back to login",
+    "backToHome": "Back to home page",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "sendResetLink": "Send reset link",
+    "loginError": "Sign in failed",
+    "signupError": "Sign up failed",
+    "signupSuccess": "Account created! Check your email.",
+    "resetSent": "Reset link sent! Check your email.",
+    "resetError": "Failed to send reset link",
+    "emailPlaceholder": "your@email.com",
+    "passwordPlaceholder": "••••••••",
+    "waiting": "Please wait...",
+    "loginBtn": "Sign in",
+    "createAccountBtn": "Sign up",
+    "sendRecoveryBtn": "Send recovery link",
+    "forgotPasswordLink": "Forgot your password?",
+    "noAccountPrompt": "Don't have an account?",
+    "hasAccountPrompt": "Already have an account?",
+    "doLogin": "Sign in",
+    "emailSent": "Email sent!",
+    "emailSentDesc": "Check your inbox to reset your password.",
+    "loginSuccess": "Signed in successfully!",
+    "signupSuccessMsg": "Account created successfully!",
+    "invalidCredentials": "Invalid credentials. Check your email and password.",
+    "emailNotConfirmed": "Email not confirmed. Check your inbox.",
+    "emailAlreadyUsed": "This email is already registered.",
+    "passwordTooShort": "Password must be at least 6 characters.",
+    "rateLimited": "For security, please wait 60 seconds before trying again.",
+    "loginTitle": "Sign in to your account",
+    "signupTitle": "Create your account",
+    "recoverTitle": "Recover your password",
+    "unknownError": "An unexpected error occurred. Please try again.",
+    "hidePassword": "Hide password",
+    "showPassword": "Show password"
+  },
+  "resetPassword": {
+    "title": "Set your new password",
+    "invalidLink": "Invalid or expired recovery link. Request a new link from the login page.",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 6 characters.",
+    "success": "Password updated successfully!",
+    "newPasswordDifferent": "New password must be different from the current one.",
+    "sessionExpired": "Session expired. Request a new recovery link.",
+    "checkingLink": "Checking recovery link...",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "waiting": "Please wait...",
+    "submit": "Reset password",
+    "back": "Back to login"
+  },
+  "diagram": {
+    "newDiagram": "New Diagram",
+    "myDiagrams": "My Diagrams",
+    "sharedWithMe": "Shared with me",
+    "savedToCloud": "Diagram saved to cloud!",
+    "exportPNG": "Export PNG",
+    "exportSVG": "Export SVG",
+    "exportJSON": "Export JSON",
+    "importJSON": "Import JSON",
+    "clearCanvas": "Clear canvas",
+    "autoLayout": "Auto layout",
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+  "nodes": {
+    "service": "Microservice",
+    "database": "Database",
+    "queue": "Queue/Messaging",
+    "external": "External System"
+  },
+  "status": {
+    "idle": "",
+    "saving": "Saving...",
+    "saved": "Saved locally",
+    "nodes": "nodes",
+    "connections": "connections"
+  },
+  "recovery": {
+    "title": "Diagram recovered",
+    "savedAt": "saved at",
+    "restore": "Restore",
+    "discard": "Discard",
+    "corruptedData": "Saved diagram data is corrupted."
+  },
+  "protected": {
+    "loading": "Loading..."
+  },
+  "save": {
+    "recentlySaved": "Diagram saved recently. Please wait a moment.",
+    "sharedSaved": "Changes saved to shared diagram!",
+    "savedAsCopy": "Diagram saved as copy!",
+    "savedAsCopyDesc": "A copy of this diagram was saved to \"My Diagrams\". You are not editing the original diagram.",
+    "savedToCloud": "Diagram saved to cloud!",
+    "error": "Save failed"
+  },
+  "export": {
+    "pngSuccess": "PNG exported successfully!",
+    "pngError": "Failed to export PNG",
+    "svgSuccess": "SVG exported successfully!",
+    "svgError": "Failed to export SVG",
+    "jsonSuccess": "JSON exported successfully!"
+  },
+  "canvas": {
+    "saveFirst": "Save the diagram first before refreshing.",
+    "notFound": "Diagram not found",
+    "alreadyUpdated": "Diagram is already up to date.",
+    "updateSuccess": "Diagram updated successfully!",
+    "updateError": "Failed to update diagram",
+    "layoutError": "Failed to apply auto layout. Please try again.",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "keyboardShortcutsBtn": "Shortcuts (?)"
+  },
+  "toolbar": {
+    "diagramName": "Diagram name",
+    "service": "Microservice",
+    "database": "Database",
+    "queue": "Queue / Messaging",
+    "api": "API / Protocol",
+    "autoLayout": "Auto Layout",
+    "export": "Export",
+    "deleteSelected": "Delete (Del)",
+    "clearDiagram": "Clear Diagram",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "elkLR": "ELK — Left → Right",
+    "elkTB": "ELK — Top → Bottom",
+    "dagreH": "Dagre — Horizontal",
+    "dagreV": "Dagre — Vertical",
+    "importJSON": "Import JSON",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
+  },
+  "nodePanel": {
+    "properties": "Properties",
+    "closePanel": "Close panel",
+    "type": "Type",
+    "name": "Name",
+    "category": "Category",
+    "internalDbs": "Internal Databases",
+    "addDb": "Add database",
+    "removeDb": "Remove database",
+    "libraries": "Libraries",
+    "addLibrary": "Add service",
+    "removeLibrary": "Remove service",
+    "typeService": "Microservice",
+    "typeDatabase": "Database",
+    "typeQueue": "Queue",
+    "typeExternal": "External API",
+    "dbDefault": "DB {{n}}",
+    "libDefault": "Library {{n}}"
+  },
+  "spawnModal": {
+    "titleFrom": "Create from \"{{label}}\"",
+    "objectType": "Object type",
+    "subtype": "Subtype",
+    "quantity": "Quantity",
+    "service": "Microservice",
+    "library": "Library",
+    "database": "Database",
+    "queue": "Queue (IBM MQ/Kafka/RabbitMQ)",
+    "api": "API (REST/gRPC/GraphQL/WS/HTTPS)",
+    "queueOnlyService": "Queues can only create microservices",
+    "oracleAlert": "Oracle will be added as an internal database of node \"{{label}}\". No separate node will be created on the canvas.",
+    "libraryAlert": "The library will be added as an internal component of node \"{{label}}\". No separate node will be created on the canvas.",
+    "connectManually": "The node will be created near \"{{label}}\". Connect them manually by dragging between the desired handles.",
+    "cancel": "Cancel",
+    "create": "Create"
+  },
+  "shareModal": {
+    "title": "Share Diagram",
+    "description": "Anyone with this link can view and collaborate on the diagram in real time.",
+    "close": "Close"
+  },
+  "shareDiagramModal": {
+    "title": "Share Diagram",
+    "searchPlaceholder": "Search users by email...",
+    "typeEmail": "Type an email to search users",
+    "noResults": "No users found",
+    "alreadyHasAccess": "Already has access",
+    "shareWith": "Share with {{count}} user(s)",
+    "usersWithAccess": "Users with access:",
+    "revokeAccess": "Revoke access",
+    "noSharedUsers": "No users with shared access.",
+    "shareSuccess": "Diagram shared with {{count}} user(s)!",
+    "shareErrors": "{{count}} error(s) while sharing",
+    "revokeSuccess": "Access revoked",
+    "revokeDesc": "{{email}} lost access.",
+    "revokeError": "Failed to revoke",
+    "close": "Close",
+    "emailSharing": "Email sharing",
+    "emailSharingLocked": "Email sharing not available",
+    "emailSharingLockedDesc": "Upgrade to the Pro plan to share diagrams by email with your team.",
+    "publicLink": "Read-only link",
+    "publicLinkDesc": "Anyone with the link can view this diagram (read-only).",
+    "generateLink": "Generate public link",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied to clipboard!",
+    "linkError": "Error generating share link."
+  },
+  "importModal": {
+    "title": "Import JSON Diagram",
+    "description": "Drag a .json file or paste the content below.",
+    "dropHere": "Drop file here",
+    "dragOrClick": "Drag a .json or click to select",
+    "cancel": "Cancel",
+    "import": "Import",
+    "validationFailed": "Validation failed",
+    "invalidJSON": "Invalid JSON",
+    "invalidFormat": "Invalid format",
+    "jsonOnly": "Only .json files are accepted"
+  },
+  "mermaidModal": {
+    "title": "Export Mermaid.js",
+    "description": "Paste this code in",
+    "descriptionSuffix": "or any markdown that supports Mermaid.",
+    "close": "Close",
+    "copied": "Copied!",
+    "copyCode": "Copy code"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "undo": "Undo",
+    "redo": "Redo",
+    "redoAlt": "Redo (alternative)",
+    "delete": "Delete selected",
+    "save": "Save to cloud",
+    "selectAll": "Select all nodes",
+    "close": "Close modals / deselect",
+    "openShortcuts": "Open keyboard shortcuts"
+  },
+  "protocolModal": {
+    "title": "Select Protocol",
+    "async": "async",
+    "sync": "sync"
+  },
+  "header": {
+    "viewingShared": "Viewing shared diagram",
+    "savedCopy": "✓ Copy saved to My Diagrams",
+    "editingShared": "Editing shared diagram",
+    "myDiagrams": "My Diagrams",
+    "myAccount": "My Account",
+    "update": "Refresh diagram",
+    "saveToCloud": "Save to cloud",
+    "logout": "Sign out"
+  },
+  "legend": {
+    "protocols": "Protocols",
+    "sync": "Synchronous",
+    "async": "Asynchronous"
+  },
+  "modals": {
+    "importSuccess": "Diagram imported successfully!",
+    "clearTitle": "Clear diagram",
+    "clearDesc": "Are you sure you want to clear the entire diagram? This action can be undone with Ctrl+Z.",
+    "cancel": "Cancel",
+    "clear": "Clear"
+  },
+  "overlays": {
+    "moveCanvas": "Move canvas",
+    "moveCanvasDrag": "Move canvas (drag)",
+    "selectObjects": "Select objects",
+    "selectObjectsDrag": "Select objects (drag)"
+  },
+  "contextMenu": {
+    "createFrom": "Create objects from this"
+  },
+  "collaborators": {
+    "anonymous": "Anonymous"
+  },
+  "myDiagrams": {
+    "title": "My Diagrams",
+    "newDiagram": "New Diagram",
+    "loadError": "Failed to load diagrams.",
+    "emptyTitle": "No diagrams saved yet",
+    "emptyDesc": "Create your first architecture diagram",
+    "createFirst": "Create first diagram",
+    "back": "Back",
+    "loading": "Loading...",
+    "loadMore": "Load more",
+    "sharedWithMe": "Shared with me",
+    "sharedBy": "Shared by {{email}}",
+    "share": "Share",
+    "duplicate": "Duplicate",
+    "rename": "Rename",
+    "delete": "Delete",
+    "deleteTitle": "Delete diagram",
+    "deleteDesc": "Are you sure? This action cannot be undone.",
+    "cancel": "Cancel",
+    "stats": "{{nodes}} nodes · {{edges}} connections",
+    "updatedAt": "Updated at {{date}}",
+    "deleteSuccess": "Diagram deleted",
+    "deleteError": "Failed to delete",
+    "renameSuccess": "Diagram renamed",
+    "renameError": "Failed to rename",
+    "duplicateSuccess": "Diagram duplicated successfully",
+    "duplicateError": "Failed to duplicate",
+    "titleEmpty": "Title cannot be empty",
+    "titleTooLong": "Title too long",
+    "titleTooLongDesc": "Maximum 100 characters",
+    "copyOf": "Copy of {{title}}",
+    "overLimit": "You have reached the Free plan limit",
+    "overLimitDesc": "You have {{count}} diagrams, but the Free plan allows a maximum of {{max}}. Your existing diagrams remain accessible, but you cannot create new ones. Delete some or upgrade.",
+    "overLimitUpgrade": "Upgrade plan"
+  },
+  "sharedDiagram": {
+    "loading": "Loading diagram...",
+    "notFound": "Diagram not found.",
+    "readOnlyBadge": "View mode",
+    "signUpToEdit": "Sign up to edit"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "home": "Return to Home"
+  },
+  "connectionError": {
+    "message": "{{source}} cannot connect to {{target}}"
+  },
+  "autoSave": {
+    "storageFull": "Local storage full",
+    "storageFullDesc": "The diagram is too large to save locally. Save to cloud to preserve your work.",
+    "untitled": "Untitled"
+  },
+  "limits": {
+    "nodeLimitReached": "Node limit reached (max: {{max}}). Upgrade your plan to add more nodes.",
+    "diagramLimitReached": "Diagram limit reached. Upgrade your plan to create more diagrams.",
+    "collaboratorLimitReached": "Collaborator limit reached (max: {{max}}). Upgrade your plan for more collaborators.",
+    "availableOnPro": "Available on Pro plan",
+    "toolbarLockedUnsaved": "Diagram limit reached. Upgrade your plan to save and continue editing."
+  },
+  "upgrade": {
+    "title": "Upgrade your plan",
+    "featureBlocked": "\"{{feature}}\" requires a paid plan.",
+    "moreDiagrams": "Create more diagrams",
+    "newDiagramBlocked": "Create new diagram",
+    "duplicateBlocked": "Duplicate diagram",
+    "diagramLimitNewDesc": "You tried to create a new diagram, but reached the {{max}}-diagram limit of the Free plan. Delete an existing diagram or upgrade to create more.",
+    "diagramLimitDuplicateDesc": "You tried to duplicate a diagram, but reached the {{max}}-diagram limit of the Free plan. Delete an existing diagram or upgrade to continue.",
+    "checkoutError": "Could not open checkout. Please try again.",
+    "choosePro": "Choose Pro",
+    "chooseTeam": "Choose Team",
+    "seeProPlans": "See Pro plans",
+    "proFeatures": {
+      "unlimitedDiagrams": "Unlimited diagrams",
+      "nodes200": "Up to 200 nodes per diagram",
+      "allFormats": "All export formats (PNG, SVG, Mermaid, JSON)",
+      "noWatermark": "No watermark on exports",
+      "emailSharing": "Email sharing (up to 5 collaborators)",
+      "realtimeCollab": "Real-time collaboration"
+    },
+    "teamFeatures": {
+      "everythingPro": "Everything in Pro",
+      "unlimitedNodes": "Unlimited nodes per diagram",
+      "workspaces": "Workspaces with role management",
+      "unlimitedCollaborators": "Unlimited collaborators",
+      "prioritySupport": "Priority support (SLA 24h)"
+    }
+  },
+  "pricing": {
+    "title": "Simple, transparent pricing",
+    "subtitle": "Choose the plan that fits your team. Upgrade or cancel anytime.",
+    "popular": "Popular",
+    "free": "Free",
+    "pro": "Pro",
+    "team": "Team",
+    "perMonth": "/mo",
+    "perEditorMonth": "/editor/mo",
+    "cycleMonthly": "Monthly",
+    "cycleQuarterly": "Quarterly",
+    "cycleSemiannual": "Semiannual",
+    "cycleAnnual": "Annual",
+    "badge": "Plans & Pricing",
+    "ctaFree": "Get started free",
+    "ctaPro": "Get Pro",
+    "ctaTeam": "Get Team",
+    "footer": "All plans include SSL encryption and automatic backups. Cancel anytime.",
+    "freeFeatures": {
+      "diagrams": "Up to 3 saved diagrams",
+      "nodes": "Up to 25 nodes per diagram",
+      "formats": "PNG + JSON export",
+      "linkSharing": "Link sharing (view-only)",
+      "community": "Community support"
+    },
+    "proFeatures": {
+      "diagrams": "Unlimited diagrams",
+      "nodes": "Up to 200 nodes per diagram",
+      "formats": "All export formats, no watermark",
+      "emailSharing": "Email sharing (5 collaborators)",
+      "realtimeCollab": "Real-time collaboration",
+      "support": "Email support (SLA 48h)"
+    },
+    "teamFeatures": {
+      "diagrams": "Unlimited diagrams",
+      "nodes": "Unlimited nodes per diagram",
+      "formats": "All export formats, no watermark",
+      "emailSharing": "Unlimited email sharing",
+      "workspaces": "Workspaces with role management",
+      "support": "Priority support (SLA 24h)"
+    }
+  },
+
+  "billing": {
+    "title": "Billing & Plan",
+    "currentPlan": "Current Plan",
+    "billingCycle": "Billing cycle",
+    "renewsOn": "Renews on",
+    "manageSubscription": "Manage subscription",
+    "upgradePlan": "Upgrade plan",
+    "usage": "Usage",
+    "diagrams": "Saved diagrams",
+    "nodesPerDiagram": "Max nodes per diagram",
+    "unlimited": "Unlimited",
+    "portalError": "Could not open billing portal. Please try again.",
+    "checkoutProcessing": "Processing your payment…",
+    "checkoutProcessingDesc": "Please wait while we confirm your subscription. This may take a few seconds.",
+    "subscriptionError": "Could not load subscription details.",
+    "status": {
+      "active": "Active",
+      "past_due": "Past due",
+      "canceled": "Canceled",
+      "trialing": "Trialing"
+    }
+  },
+  "account": {
+    "title": "My Account",
+    "email": "Email Address",
+    "profileSettings": "Profile Settings",
+    "resetPassword": "Reset Password",
+    "signOut": "Sign Out",
+    "billingAndPlan": "Billing & Plan",
+    "avatar": "Profile photo",
+    "changeAvatar": "Change photo",
+    "avatarUpdated": "Profile photo updated!",
+    "avatarUploadError": "Failed to upload photo",
+    "avatarInvalidType": "Invalid format. Use JPG, PNG, WebP or GIF.",
+    "avatarTooLarge": "File too large. Maximum 2 MB.",
+    "resetPasswordError": "Failed to reset password"
+  },
+  "landing": {
+    "nav": {
+      "cta": "Login",
+      "langSwitch": "PT",
+      "links": ["Nodes", "Features", "Protocols", "Security", "How It Works", "Pricing"]
+    },
+    "backToTop": "↑ Top",
+    "hero": {
+      "headline": "Design microservices architectures visually",
+      "sub": "Create professional diagrams with drag-and-drop, real-time collaboration, and export to PNG, SVG, Mermaid and JSON. No install needed.",
+      "ctaPrimary": "Login",
+      "pills": ["Undo/Redo", "Dark Mode", "AES-256", "11 Protocols"]
+    },
+    "nodes": {
+      "title": "Four specialized node types",
+      "subtitle": "Each type with specific behaviors and connections",
+      "items": [
+        {"name": "Microservice", "desc": "Independent services with embedded databases and internal libraries"},
+        {"name": "Database", "desc": "8 variants: Oracle, PostgreSQL, MySQL, Redis, MongoDB and more"},
+        {"name": "Queue/Messaging", "desc": "IBM MQ, Kafka and RabbitMQ with dashed connections"},
+        {"name": "External System", "desc": "External APIs: REST, gRPC, GraphQL, WebSocket, HTTPS"}
+      ]
+    },
+    "features": {
+      "title": "Professional features",
+      "items": [
+        {"heading": "Drag-and-Drop Visual Editor", "desc": "Interactive canvas with zoom, pan, minimap, snap-guides and snap grid. Smart auto-layout."},
+        {"heading": "Protocol Connections", "desc": "11 visual protocols with distinct colors. Editable orthogonal connections with protocol labels."},
+        {"heading": "Undo/Redo + Auto-save", "desc": "50 history states with Ctrl+Z. Auto-save every 1.5s with gzip compression in IndexedDB."},
+        {"heading": "Professional Export", "desc": "PNG, SVG, Mermaid and JSON. Import back with Zod validation. Share with public link."}
+      ]
+    },
+    "protocols": {
+      "title": "11 supported protocols",
+      "sub": "Visually distinct colors for synchronous and asynchronous",
+      "sync": "Synchronous",
+      "async": "Asynchronous"
+    },
+    "security": {
+      "title": "Enterprise security",
+      "items": [
+        {"name": "AES-256-GCM", "desc": "All diagrams encrypted before reaching the database"},
+        {"name": "Row Level Security", "desc": "Granular access policies in PostgreSQL via Supabase RLS"},
+        {"name": "Zod Validation", "desc": "All inputs validated with strict schema before persisting"},
+        {"name": "Strict CSP", "desc": "Content Security Policy configured in HTML to block XSS"}
+      ]
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "steps": [
+        {"title": "Create your account", "desc": "Sign up with email and password. Access immediately after login."},
+        {"title": "Build your diagram", "desc": "Drag nodes, connect services, define protocols. Auto-layout available."},
+        {"title": "Share and export", "desc": "Share with colleagues, export to PNG, SVG, Mermaid or JSON."}
+      ]
+    },
+    "finalCta": {
+      "headline": "Ready to visualize your architecture?",
+      "sub": "Start free today. No credit card required.",
+      "btn": "Login"
+    },
+    "pricing": {
+      "goToApp": "Go to App"
+    },
+    "footer": {
+      "tagline": "Visual editor for microservices architectures",
+      "madeWith": "Made with",
+      "forArchitects": "for software architects",
+      "copy": "© 2026 MicroFlow Architect. All rights reserved."
+    }
+  },
+  "workspace": {
+    "title": "Workspace",
+    "personal": "Personal",
+    "manage": "Manage workspace",
+    "diagrams": "Workspace diagrams",
+    "noWorkspace": "No workspace yet",
+    "noWorkspaceDesc": "The Team plan lets you create a shared workspace for your team.",
+    "create": "Create workspace",
+    "created": "Workspace created successfully!",
+    "createError": "Failed to create workspace",
+    "members": "Members",
+    "invite": "Invite member",
+    "inviteTitle": "Invite member",
+    "inviteEmail": "Member email",
+    "inviteRole": "Role",
+    "inviteBtn": "Send invite",
+    "inviteSent": "Invite sent to {{email}}",
+    "inviteError": "Failed to send invite",
+    "inviteResent": "Invite resent to {{email}}",
+    "inviteResend": "Resend invite by email",
+    "inviteLinkDesc": "This email doesn't have an account yet. Share the link below with the invitee:",
+    "inviteLinkExpiry": "The link expires in 7 days.",
+    "inviteAccepted": "Invite accepted!",
+    "inviteAcceptedDesc": "You've been added to the workspace. Redirecting...",
+    "roleEditor": "Editor",
+    "roleEditorDesc": "can create and edit",
+    "roleViewer": "Viewer",
+    "roleViewerDesc": "read-only",
+    "editors": "Editors",
+    "viewers": "Viewers",
+    "charged": "billed",
+    "free": "free",
+    "pending": "Pending",
+    "invitedAt": "Invited on {{date}}",
+    "memberRemoved": "Member removed",
+    "memberRemoveError": "Failed to remove member",
+    "roleUpdateError": "Failed to update role",
+    "renameSuccess": "Workspace renamed",
+    "renameError": "Failed to rename workspace",
+    "removeTitle": "Remove member",
+    "removeDesc": "Are you sure you want to remove {{email}} from the workspace?",
+    "removeMember": "Remove",
+    "roleBadge": "{{role}} in workspace",
+    "contextWorkspace": "Workspace: {{name}}"
+  }
+}

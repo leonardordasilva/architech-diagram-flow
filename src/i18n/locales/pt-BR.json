@@ -1,0 +1,584 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "tryAgain": "Tentar novamente",
+    "close": "Fechar",
+    "waiting": "Aguarde...",
+    "back": "Voltar"
+  },
+  "errors": {
+    "unexpected": "Erro inesperado",
+    "unexpectedDesc": "Algo deu errado. Tente recarregar a página.",
+    "networkOp": "Erro de rede ou operação",
+    "asyncFailed": "Uma operação assíncrona falhou.",
+    "somethingWrong": "Algo deu errado.",
+    "diagramRender": "Erro ao renderizar o diagrama",
+    "diagramRenderDesc": "Ocorreu um erro inesperado. Seus dados foram preservados no auto-save local.",
+    "reload": "Recarregar página"
+  },
+  "auth": {
+    "login": "Entrar",
+    "signup": "Criar conta",
+    "logout": "Sair",
+    "email": "E-mail",
+    "password": "Senha",
+    "forgotPassword": "Esqueci minha senha",
+    "resetPassword": "Redefinir senha",
+    "backToLogin": "Voltar ao login",
+    "backToHome": "Voltar à página inicial",
+    "noAccount": "Não tem uma conta?",
+    "hasAccount": "Já tem uma conta?",
+    "sendResetLink": "Enviar link de redefinição",
+    "loginError": "Erro ao entrar",
+    "signupError": "Erro ao criar conta",
+    "signupSuccess": "Conta criada com sucesso! Verifique seu e-mail.",
+    "resetSent": "Link de redefinição enviado! Verifique seu e-mail.",
+    "resetError": "Erro ao enviar link",
+    "emailPlaceholder": "seu@email.com",
+    "passwordPlaceholder": "••••••••",
+    "waiting": "Aguarde...",
+    "loginBtn": "Entrar",
+    "createAccountBtn": "Criar conta",
+    "sendRecoveryBtn": "Enviar link de recuperação",
+    "forgotPasswordLink": "Esqueceu sua senha?",
+    "noAccountPrompt": "Não tem conta?",
+    "hasAccountPrompt": "Já tem conta?",
+    "doLogin": "Fazer login",
+    "emailSent": "E-mail enviado!",
+    "emailSentDesc": "Verifique sua caixa de entrada para redefinir sua senha.",
+    "loginSuccess": "Login realizado com sucesso!",
+    "signupSuccessMsg": "Conta criada com sucesso!",
+    "invalidCredentials": "Credenciais inválidas. Verifique seu e-mail e senha.",
+    "emailNotConfirmed": "E-mail não confirmado. Verifique sua caixa de entrada.",
+    "emailAlreadyUsed": "Este e-mail já está cadastrado.",
+    "passwordTooShort": "A senha deve ter no mínimo 6 caracteres.",
+    "rateLimited": "Por segurança, aguarde 60 segundos antes de solicitar novamente.",
+    "loginTitle": "Entre na sua conta",
+    "signupTitle": "Crie sua conta",
+    "recoverTitle": "Recupere sua senha",
+    "unknownError": "Ocorreu um erro inesperado. Tente novamente.",
+    "hidePassword": "Ocultar senha",
+    "showPassword": "Mostrar senha"
+  },
+  "resetPassword": {
+    "title": "Defina sua nova senha",
+    "invalidLink": "Link de recuperação inválido ou expirado. Solicite um novo link na tela de login.",
+    "passwordMismatch": "As senhas não coincidem.",
+    "passwordTooShort": "A senha deve ter no mínimo 6 caracteres.",
+    "success": "Senha atualizada com sucesso!",
+    "newPasswordDifferent": "A nova senha deve ser diferente da senha atual.",
+    "sessionExpired": "Sessão expirada. Solicite um novo link de recuperação.",
+    "checkingLink": "Verificando link de recuperação...",
+    "newPassword": "Nova senha",
+    "confirmPassword": "Confirmar senha",
+    "waiting": "Aguarde...",
+    "submit": "Redefinir senha",
+    "back": "Voltar ao login"
+  },
+  "diagram": {
+    "newDiagram": "Novo Diagrama",
+    "myDiagrams": "Meus Diagramas",
+    "sharedWithMe": "Compartilhados comigo",
+    "savedToCloud": "Diagrama salvo na nuvem!",
+    "exportPNG": "Exportar PNG",
+    "exportSVG": "Exportar SVG",
+    "exportJSON": "Exportar JSON",
+    "importJSON": "Importar JSON",
+    "clearCanvas": "Limpar diagrama",
+    "autoLayout": "Layout automático",
+    "undo": "Desfazer",
+    "redo": "Refazer"
+  },
+  "nodes": {
+    "service": "Microserviço",
+    "database": "Banco de Dados",
+    "queue": "Fila/Mensageria",
+    "external": "Sistema Externo"
+  },
+  "status": {
+    "idle": "",
+    "saving": "Salvando...",
+    "saved": "Salvo localmente",
+    "nodes": "nós",
+    "connections": "conexões"
+  },
+  "recovery": {
+    "title": "Diagrama recuperado",
+    "savedAt": "salvo em",
+    "restore": "Restaurar",
+    "discard": "Descartar",
+    "corruptedData": "Dados do diagrama salvo estão corrompidos."
+  },
+  "protected": {
+    "loading": "Carregando..."
+  },
+  "save": {
+    "recentlySaved": "Diagrama salvo recentemente. Aguarde um momento.",
+    "sharedSaved": "Alterações salvas no diagrama compartilhado!",
+    "savedAsCopy": "Diagrama salvo como cópia!",
+    "savedAsCopyDesc": "Uma cópia deste diagrama foi salva em \"Meus Diagramas\". Você não está editando o diagrama original.",
+    "savedToCloud": "Diagrama salvo na nuvem!",
+    "error": "Erro ao salvar"
+  },
+  "export": {
+    "pngSuccess": "PNG exportado com sucesso!",
+    "pngError": "Erro ao exportar PNG",
+    "svgSuccess": "SVG exportado com sucesso!",
+    "svgError": "Erro ao exportar SVG",
+    "jsonSuccess": "JSON exportado com sucesso!"
+  },
+  "canvas": {
+    "saveFirst": "Salve o diagrama primeiro para poder atualizar.",
+    "notFound": "Diagrama não encontrado",
+    "alreadyUpdated": "Diagrama já está atualizado.",
+    "updateSuccess": "Diagrama atualizado com sucesso!",
+    "updateError": "Erro ao atualizar diagrama",
+    "layoutError": "Erro ao aplicar layout automático. Tente novamente.",
+    "keyboardShortcuts": "Atalhos de teclado",
+    "keyboardShortcutsBtn": "Atalhos (?)"
+  },
+  "toolbar": {
+    "diagramName": "Nome do diagrama",
+    "service": "Microserviço",
+    "database": "Banco de Dados",
+    "queue": "Fila / Mensageria",
+    "api": "API / Protocolo",
+    "autoLayout": "Auto Layout",
+    "export": "Exportar",
+    "deleteSelected": "Deletar (Del)",
+    "clearDiagram": "Limpar Diagrama",
+    "undo": "Desfazer (Ctrl+Z)",
+    "redo": "Refazer (Ctrl+Y)",
+    "elkLR": "ELK — Esquerda → Direita",
+    "elkTB": "ELK — Cima → Baixo",
+    "dagreH": "Dagre — Horizontal",
+    "dagreV": "Dagre — Vertical",
+    "importJSON": "Importar JSON",
+    "lightMode": "Modo Claro",
+    "darkMode": "Modo Escuro"
+  },
+  "nodePanel": {
+    "properties": "Propriedades",
+    "closePanel": "Fechar painel",
+    "type": "Tipo",
+    "name": "Nome",
+    "category": "Categoria",
+    "internalDbs": "Bancos Internos",
+    "addDb": "Adicionar banco",
+    "removeDb": "Remover banco",
+    "libraries": "Bibliotecas",
+    "addLibrary": "Adicionar serviço",
+    "removeLibrary": "Remover serviço",
+    "typeService": "Microserviço",
+    "typeDatabase": "Banco de Dados",
+    "typeQueue": "Fila",
+    "typeExternal": "API Externa",
+    "dbDefault": "DB {{n}}",
+    "libDefault": "Biblioteca {{n}}"
+  },
+  "spawnModal": {
+    "titleFrom": "Criar a partir de \"{{label}}\"",
+    "objectType": "Tipo do objeto",
+    "subtype": "Subtipo",
+    "quantity": "Quantidade",
+    "service": "Microserviço",
+    "library": "Biblioteca",
+    "database": "Banco de Dados",
+    "queue": "Fila (IBM MQ/Kafka/RabbitMQ)",
+    "api": "API (REST/gRPC/GraphQL/WS/HTTPS)",
+    "queueOnlyService": "Filas só podem criar microserviços",
+    "oracleAlert": "O Oracle será adicionado como banco interno do nó \"{{label}}\". Nenhum nó separado será criado no canvas.",
+    "libraryAlert": "A biblioteca será adicionada como componente interno do nó \"{{label}}\". Nenhum nó separado será criado no canvas.",
+    "connectManually": "O nó será criado próximo a \"{{label}}\". Conecte-os manualmente arrastando entre os handles desejados.",
+    "cancel": "Cancelar",
+    "create": "Criar"
+  },
+  "shareModal": {
+    "title": "Compartilhar Diagrama",
+    "description": "Qualquer pessoa com este link pode visualizar e colaborar no diagrama em tempo real.",
+    "close": "Fechar"
+  },
+  "shareDiagramModal": {
+    "title": "Compartilhar Diagrama",
+    "searchPlaceholder": "Buscar usuários por e-mail...",
+    "typeEmail": "Digite um e-mail para buscar usuários",
+    "noResults": "Nenhum usuário encontrado",
+    "alreadyHasAccess": "Já tem acesso",
+    "shareWith": "Compartilhar com {{count}} usuário(s)",
+    "usersWithAccess": "Usuários com acesso:",
+    "revokeAccess": "Revogar acesso",
+    "noSharedUsers": "Nenhum usuário com acesso compartilhado.",
+    "shareSuccess": "Diagrama compartilhado com {{count}} usuário(s)!",
+    "shareErrors": "{{count}} erro(s) ao compartilhar",
+    "revokeSuccess": "Acesso revogado",
+    "revokeDesc": "{{email}} perdeu o acesso.",
+    "revokeError": "Erro ao revogar",
+    "close": "Fechar",
+    "emailSharing": "Compartilhamento por e-mail",
+    "emailSharingLocked": "Compartilhamento por e-mail não disponível",
+    "emailSharingLockedDesc": "Faça upgrade para o plano Pro para compartilhar diagramas por e-mail com sua equipe.",
+    "publicLink": "Link de leitura",
+    "publicLinkDesc": "Qualquer pessoa com o link pode visualizar este diagrama (somente leitura).",
+    "generateLink": "Gerar link público",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado para a área de transferência!",
+    "linkError": "Erro ao gerar link de compartilhamento."
+  },
+  "importModal": {
+    "title": "Importar Diagrama JSON",
+    "description": "Arraste um arquivo .json ou cole o conteúdo abaixo.",
+    "dropHere": "Solte o arquivo aqui",
+    "dragOrClick": "Arraste um .json ou clique para selecionar",
+    "cancel": "Cancelar",
+    "import": "Importar",
+    "validationFailed": "Validação falhou",
+    "invalidJSON": "JSON inválido",
+    "invalidFormat": "Formato inválido",
+    "jsonOnly": "Apenas arquivos .json são aceitos"
+  },
+  "mermaidModal": {
+    "title": "Exportar Mermaid.js",
+    "description": "Cole este código em",
+    "descriptionSuffix": "ou em qualquer markdown que suporte Mermaid.",
+    "close": "Fechar",
+    "copied": "Copiado!",
+    "copyCode": "Copiar código"
+  },
+  "shortcuts": {
+    "title": "Atalhos de Teclado",
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "redoAlt": "Refazer (alternativo)",
+    "delete": "Deletar selecionado",
+    "save": "Salvar na nuvem",
+    "selectAll": "Selecionar todos os nós",
+    "close": "Fechar modais / deselecionar",
+    "openShortcuts": "Abrir atalhos de teclado"
+  },
+  "protocolModal": {
+    "title": "Selecionar Protocolo",
+    "async": "async",
+    "sync": "sync"
+  },
+  "header": {
+    "viewingShared": "Visualizando diagrama compartilhado",
+    "savedCopy": "✓ Cópia salva em Meus Diagramas",
+    "editingShared": "Editando diagrama compartilhado",
+    "myDiagrams": "Meus Diagramas",
+    "myAccount": "Minha Conta",
+    "update": "Atualizar diagrama",
+    "saveToCloud": "Salvar na nuvem",
+    "logout": "Sair"
+  },
+  "legend": {
+    "protocols": "Protocolos",
+    "sync": "Síncrono",
+    "async": "Assíncrono"
+  },
+  "modals": {
+    "importSuccess": "Diagrama importado com sucesso!",
+    "clearTitle": "Limpar diagrama",
+    "clearDesc": "Tem certeza que deseja limpar todo o diagrama? Esta ação pode ser desfeita com Ctrl+Z.",
+    "cancel": "Cancelar",
+    "clear": "Limpar"
+  },
+  "overlays": {
+    "moveCanvas": "Mover canvas",
+    "moveCanvasDrag": "Mover canvas (arrastar)",
+    "selectObjects": "Selecionar objetos",
+    "selectObjectsDrag": "Selecionar objetos (arrastar)"
+  },
+  "contextMenu": {
+    "createFrom": "Criar objetos a partir deste"
+  },
+  "collaborators": {
+    "anonymous": "Anônimo"
+  },
+  "myDiagrams": {
+    "title": "Meus Diagramas",
+    "newDiagram": "Novo Diagrama",
+    "loadError": "Erro ao carregar diagramas.",
+    "emptyTitle": "Nenhum diagrama salvo ainda",
+    "emptyDesc": "Crie seu primeiro diagrama de arquitetura",
+    "createFirst": "Criar primeiro diagrama",
+    "back": "Voltar",
+    "loading": "Carregando...",
+    "loadMore": "Carregar mais",
+    "sharedWithMe": "Compartilhados comigo",
+    "sharedBy": "Compartilhado por {{email}}",
+    "share": "Compartilhar",
+    "duplicate": "Duplicar",
+    "rename": "Renomear",
+    "delete": "Excluir",
+    "deleteTitle": "Excluir diagrama",
+    "deleteDesc": "Tem certeza? Esta ação não pode ser desfeita.",
+    "cancel": "Cancelar",
+    "stats": "{{nodes}} nós · {{edges}} conexões",
+    "updatedAt": "Atualizado em {{date}}",
+    "deleteSuccess": "Diagrama excluído",
+    "deleteError": "Erro ao excluir",
+    "renameSuccess": "Diagrama renomeado",
+    "renameError": "Erro ao renomear",
+    "duplicateSuccess": "Diagrama duplicado com sucesso",
+    "duplicateError": "Erro ao duplicar",
+    "titleEmpty": "Título não pode ser vazio",
+    "titleTooLong": "Título muito longo",
+    "titleTooLongDesc": "Máximo de 100 caracteres",
+    "copyOf": "Cópia de {{title}}",
+    "overLimit": "Você chegou ao limite do plano Free",
+    "overLimitDesc": "Você possui {{count}} diagramas, mas o plano Free permite no máximo {{max}}. Seus diagramas existentes continuam acessíveis, mas você não pode criar novos. Exclua alguns ou faça upgrade.",
+    "overLimitUpgrade": "Fazer upgrade"
+  },
+  "sharedDiagram": {
+    "loading": "Carregando diagrama...",
+    "notFound": "Diagrama não encontrado.",
+    "readOnlyBadge": "Modo visualização",
+    "signUpToEdit": "Criar conta para editar"
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "home": "Voltar ao início"
+  },
+  "connectionError": {
+    "message": "{{source}} não pode se conectar a {{target}}"
+  },
+  "autoSave": {
+    "storageFull": "Armazenamento local cheio",
+    "storageFullDesc": "O diagrama é muito grande para salvar localmente. Salve na nuvem para não perder seu trabalho.",
+    "untitled": "Sem título"
+  },
+  "limits": {
+    "nodeLimitReached": "Limite de nós atingido (máximo: {{max}}). Faça upgrade para adicionar mais nós.",
+    "diagramLimitReached": "Limite de diagramas atingido. Faça upgrade para criar mais diagramas.",
+    "collaboratorLimitReached": "Limite de colaboradores atingido (máximo: {{max}}). Faça upgrade para adicionar mais.",
+    "availableOnPro": "Disponível no plano Pro",
+    "toolbarLockedUnsaved": "Limite de diagramas atingido. Faça upgrade para salvar e continuar editando."
+  },
+  "upgrade": {
+    "title": "Faça upgrade do seu plano",
+    "featureBlocked": "\"{{feature}}\" requer um plano pago.",
+    "moreDiagrams": "Criar mais diagramas",
+    "newDiagramBlocked": "Criar novo diagrama",
+    "duplicateBlocked": "Duplicar diagrama",
+    "diagramLimitNewDesc": "Você tentou criar um novo diagrama, mas atingiu o limite de {{max}} diagrama(s) do plano Free. Exclua um diagrama existente ou faça upgrade para criar mais.",
+    "diagramLimitDuplicateDesc": "Você tentou duplicar um diagrama, mas atingiu o limite de {{max}} diagrama(s) do plano Free. Exclua um diagrama existente ou faça upgrade para continuar.",
+    "checkoutError": "Não foi possível abrir o checkout. Tente novamente.",
+    "choosePro": "Escolher Pro",
+    "chooseTeam": "Escolher Team",
+    "seeProPlans": "Ver planos Pro",
+    "proFeatures": {
+      "unlimitedDiagrams": "Diagramas ilimitados",
+      "nodes200": "Até 200 nós por diagrama",
+      "allFormats": "Todos os formatos de exportação (PNG, SVG, Mermaid, JSON)",
+      "noWatermark": "Sem marca d'água nas exportações",
+      "emailSharing": "Compartilhamento por e-mail (até 5 colaboradores)",
+      "realtimeCollab": "Colaboração em tempo real"
+    },
+    "teamFeatures": {
+      "everythingPro": "Tudo do plano Pro",
+      "unlimitedNodes": "Nós ilimitados por diagrama",
+      "workspaces": "Workspaces com gestão de membros",
+      "unlimitedCollaborators": "Colaboradores ilimitados",
+      "prioritySupport": "Suporte prioritário (SLA 24h)"
+    }
+  },
+  "pricing": {
+    "title": "Preços simples e transparentes",
+    "subtitle": "Escolha o plano ideal para sua equipe. Faça upgrade ou cancele quando quiser.",
+    "popular": "Popular",
+    "free": "Free",
+    "pro": "Pro",
+    "team": "Team",
+    "perMonth": "/mês",
+    "perEditorMonth": "/editor/mês",
+    "cycleMonthly": "Mensal",
+    "cycleQuarterly": "Trimestral",
+    "cycleSemiannual": "Semestral",
+    "cycleAnnual": "Anual",
+    "badge": "Planos e Preços",
+    "ctaFree": "Começar grátis",
+    "ctaPro": "Assinar Pro",
+    "ctaTeam": "Assinar Team",
+    "footer": "Todos os planos incluem criptografia SSL e backups automáticos. Cancele quando quiser.",
+    "freeFeatures": {
+      "diagrams": "Até 3 diagramas salvos",
+      "nodes": "Até 25 nós por diagrama",
+      "formats": "Exportação PNG + JSON",
+      "linkSharing": "Compartilhamento por link (somente leitura)",
+      "community": "Suporte community"
+    },
+    "proFeatures": {
+      "diagrams": "Diagramas ilimitados",
+      "nodes": "Até 200 nós por diagrama",
+      "formats": "Todos os formatos, sem marca d'água",
+      "emailSharing": "Compartilhamento por e-mail (5 colaboradores)",
+      "realtimeCollab": "Colaboração em tempo real",
+      "support": "Suporte por e-mail (SLA 48h)"
+    },
+    "teamFeatures": {
+      "diagrams": "Diagramas ilimitados",
+      "nodes": "Nós ilimitados por diagrama",
+      "formats": "Todos os formatos, sem marca d'água",
+      "emailSharing": "Compartilhamento por e-mail ilimitado",
+      "workspaces": "Workspaces com gestão de membros",
+      "support": "Suporte prioritário (SLA 24h)"
+    }
+  },
+  "billing": {
+    "title": "Plano e Cobrança",
+    "currentPlan": "Plano Atual",
+    "billingCycle": "Ciclo de cobrança",
+    "renewsOn": "Renova em",
+    "manageSubscription": "Gerenciar assinatura",
+    "upgradePlan": "Fazer upgrade",
+    "usage": "Uso",
+    "diagrams": "Diagramas salvos",
+    "nodesPerDiagram": "Máx. nós por diagrama",
+    "unlimited": "Ilimitado",
+    "portalError": "Não foi possível abrir o portal de cobrança. Tente novamente.",
+    "checkoutProcessing": "Processando seu pagamento…",
+    "checkoutProcessingDesc": "Aguarde enquanto confirmamos sua assinatura. Isso pode levar alguns segundos.",
+    "subscriptionError": "Não foi possível carregar os detalhes da assinatura.",
+    "status": {
+      "active": "Ativo",
+      "past_due": "Em atraso",
+      "canceled": "Cancelado",
+      "trialing": "Em avaliação"
+    }
+  },
+  "account": {
+    "title": "Minha Conta",
+    "email": "Endereço de E-mail",
+    "profileSettings": "Configurações do Perfil",
+    "resetPassword": "Redefinir Senha",
+    "signOut": "Sair",
+    "billingAndPlan": "Plano e Cobrança",
+    "avatar": "Foto de perfil",
+    "changeAvatar": "Alterar foto",
+    "avatarUpdated": "Foto de perfil atualizada!",
+    "avatarUploadError": "Erro ao fazer upload da foto",
+    "avatarInvalidType": "Formato inválido. Use JPG, PNG, WebP ou GIF.",
+    "avatarTooLarge": "Arquivo muito grande. Máximo de 2 MB.",
+    "resetPasswordError": "Erro ao redefinir senha"
+  },
+  "landing": {
+    "nav": {
+      "cta": "Login",
+      "langSwitch": "EN",
+      "links": ["Nós", "Funcionalidades", "Protocolos", "Segurança", "Como Funciona", "Preços"]
+    },
+    "backToTop": "↑ Topo",
+    "hero": {
+      "headline": "Projete arquiteturas de microsserviços visualmente",
+      "sub": "Crie diagramas profissionais com drag-and-drop, colaboração em tempo real e exportação para PNG, SVG, Mermaid e JSON. Sem instalação.",
+      "ctaPrimary": "Login",
+      "pills": ["Undo/Redo", "Dark Mode", "AES-256", "11 Protocolos"]
+    },
+    "nodes": {
+      "title": "Quatro tipos de nós especializados",
+      "subtitle": "Cada tipo com comportamentos e conexões específicos",
+      "items": [
+        {"name": "Microserviço", "desc": "Serviços independentes com bancos embarcados e bibliotecas internas"},
+        {"name": "Banco de Dados", "desc": "8 variantes: Oracle, PostgreSQL, MySQL, Redis, MongoDB e mais"},
+        {"name": "Fila/Mensageria", "desc": "IBM MQ, Kafka e RabbitMQ com conexões tracejadas"},
+        {"name": "Sistema Externo", "desc": "APIs externas: REST, gRPC, GraphQL, WebSocket, HTTPS"}
+      ]
+    },
+    "features": {
+      "title": "Funcionalidades profissionais",
+      "items": [
+        {"heading": "Editor Visual Drag-and-Drop", "desc": "Canvas interativo com zoom, pan, minimap, snap-guides e grid de encaixe. Layout automático inteligente."},
+        {"heading": "Conexões com Protocolos", "desc": "11 protocolos visuais com cores distintas. Conexões ortogonais editáveis com rótulos de protocolo."},
+        {"heading": "Undo/Redo + Auto-save", "desc": "50 estados de histórico com Ctrl+Z. Auto-save a cada 1.5s com compressão gzip em IndexedDB."},
+        {"heading": "Exportação Profissional", "desc": "PNG, SVG, Mermaid e JSON. Importe de volta com validação Zod. Compartilhe com link público."}
+      ]
+    },
+    "protocols": {
+      "title": "11 protocolos suportados",
+      "sub": "Visual com cores distintas para síncronos e assíncronos",
+      "sync": "Síncrono",
+      "async": "Assíncrono"
+    },
+    "security": {
+      "title": "Segurança enterprise",
+      "items": [
+        {"name": "AES-256-GCM", "desc": "Todos os diagramas criptografados antes de chegar ao banco de dados"},
+        {"name": "Row Level Security", "desc": "Políticas de acesso granulares no PostgreSQL via Supabase RLS"},
+        {"name": "Validação Zod", "desc": "Todos os inputs validados com schema rigoroso antes de persistir"},
+        {"name": "CSP Restritiva", "desc": "Content Security Policy configurada no HTML para bloquear XSS"}
+      ]
+    },
+    "howItWorks": {
+      "title": "Como funciona",
+      "steps": [
+        {"title": "Crie sua conta", "desc": "Cadastro com e-mail e senha. Acesse imediatamente após o login."},
+        {"title": "Monte seu diagrama", "desc": "Arraste nós, conecte serviços, defina protocolos. Layout automático disponível."},
+        {"title": "Compartilhe e exporte", "desc": "Compartilhe com colegas, exporte em PNG, SVG, Mermaid ou JSON."}
+      ]
+    },
+    "finalCta": {
+      "headline": "Pronto para visualizar sua arquitetura?",
+      "sub": "Comece gratuitamente hoje. Sem cartão de crédito.",
+      "btn": "Login"
+    },
+    "pricing": {
+      "goToApp": "Ir para o App"
+    },
+    "footer": {
+      "tagline": "Editor visual de arquiteturas de microsserviços",
+      "madeWith": "Feito com",
+      "forArchitects": "para arquitetos de software",
+      "copy": "© 2026 MicroFlow Architect. Todos os direitos reservados."
+    }
+  },
+  "workspace": {
+    "title": "Workspace",
+    "personal": "Pessoal",
+    "manage": "Gerenciar workspace",
+    "diagrams": "Diagramas do workspace",
+    "noWorkspace": "Nenhum workspace ainda",
+    "noWorkspaceDesc": "O plano Team permite criar um workspace compartilhado com sua equipe.",
+    "create": "Criar workspace",
+    "created": "Workspace criado com sucesso!",
+    "createError": "Erro ao criar workspace",
+    "members": "Membros",
+    "invite": "Convidar membro",
+    "inviteTitle": "Convidar membro",
+    "inviteEmail": "E-mail do membro",
+    "inviteRole": "Função",
+    "inviteBtn": "Enviar convite",
+    "inviteSent": "Convite enviado para {{email}}",
+    "inviteError": "Erro ao enviar convite",
+    "inviteResent": "Convite reenviado para {{email}}",
+    "inviteResend": "Reenviar convite por email",
+    "inviteLinkDesc": "Este email não possui conta ainda. Compartilhe o link abaixo com o convidado:",
+    "inviteLinkExpiry": "O link expira em 7 dias.",
+    "inviteAccepted": "Convite aceito!",
+    "inviteAcceptedDesc": "Você foi adicionado ao workspace. Redirecionando...",
+    "roleEditor": "Editor",
+    "roleEditorDesc": "pode criar e editar",
+    "roleViewer": "Visualizador",
+    "roleViewerDesc": "somente leitura",
+    "editors": "Editores",
+    "viewers": "Visualizadores",
+    "charged": "cobráveis",
+    "free": "grátis",
+    "pending": "Pendente",
+    "invitedAt": "Convidado em {{date}}",
+    "memberRemoved": "Membro removido",
+    "memberRemoveError": "Erro ao remover membro",
+    "roleUpdateError": "Erro ao alterar função",
+    "renameSuccess": "Workspace renomeado",
+    "renameError": "Erro ao renomear workspace",
+    "removeTitle": "Remover membro",
+    "removeDesc": "Tem certeza que deseja remover {{email}} do workspace?",
+    "removeMember": "Remover",
+    "roleBadge": "{{role}} no workspace",
+    "contextWorkspace": "Workspace: {{name}}"
+  }
+}

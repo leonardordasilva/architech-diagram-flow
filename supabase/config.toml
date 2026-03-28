@@ -1,0 +1,28 @@
+project_id = "lqgwxrymnpmkanrecugy"
+
+[functions.verify-checkout]
+verify_jwt = false
+
+[functions.stripe-checkout]
+verify_jwt = false
+
+[functions.stripe-portal]
+verify_jwt = false
+
+[functions.share-diagram]
+verify_jwt = false
+
+[functions.diagram-crypto]
+verify_jwt = false
+
+[functions.create-workspace]
+verify_jwt = false
+
+[functions.invite-workspace-member]
+verify_jwt = false
+
+[functions.accept-workspace-invite]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
