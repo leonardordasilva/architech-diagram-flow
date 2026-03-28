@@ -1,9 +1,12 @@
 import { memo, useState, useEffect } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Database } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { DiagramNodeData } from '@/types/diagram';
 import { useDiagramStore } from '@/store/diagramStore';
 import { getDbColor } from '@/constants/databaseColors';
+
+const sanitize = (text: string) => DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
 
 const DatabaseNode = memo(({ data, id, selected }: NodeProps) => {
   const nodeData = data as unknown as DiagramNodeData;
@@ -55,11 +58,11 @@ const DatabaseNode = memo(({ data, id, selected }: NodeProps) => {
           />
         ) : (
           <span className="text-sm font-semibold text-foreground cursor-pointer truncate" onDoubleClick={handleDoubleClick}>
-            {label}
+            {sanitize(label)}
           </span>
         )}
       </div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{nodeData.subType || 'Oracle'}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{sanitize(nodeData.subType || 'Oracle')}</div>
 
       <Handle id="bottom-target" type="target" position={Position.Bottom} className="!w-3 !h-3" style={handleStyle} />
       <Handle id="bottom-source" type="source" position={Position.Bottom} className="!w-3 !h-3" style={handleStyle} />

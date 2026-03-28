@@ -92,6 +92,23 @@ function isEncrypted(value: unknown): value is { iv: string; ciphertext: string 
   );
 }
 
+// ─── Rate Limiter ───────────────────────────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 60;
+const RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
 // ─── Handler ────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -105,12 +122,8 @@ serve(async (req) => {
     // ── Authentication ──────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
 
-    // Log for debugging (will appear in Supabase Logs)
-    console.log("Auth Header present:", !!authHeader);
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    console.log("SUPABASE_URL configured:", !!SUPABASE_URL);
-    console.log("SUPABASE_ANON_KEY configured:", !!SUPABASE_ANON_KEY);
 
     const jwt = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : null;
     if (!jwt) {
@@ -137,7 +150,13 @@ serve(async (req) => {
       );
     }
 
-    console.log("Authenticated user:", userData.user.id);
+    // Rate limit check
+    if (!checkRateLimit(userData.user.id)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // ── Business logic ──────────────────────────────────────
     const body = await req.json();

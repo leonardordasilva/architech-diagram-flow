@@ -69,6 +69,7 @@ export type Database = {
       }
       diagrams: {
         Row: {
+          content_hash: string | null
           created_at: string
           deleted_at: string | null
           edge_count: number
@@ -84,6 +85,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          content_hash?: string | null
           created_at?: string
           deleted_at?: string | null
           edge_count?: number
@@ -99,6 +101,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          content_hash?: string | null
           created_at?: string
           deleted_at?: string | null
           edge_count?: number
@@ -498,6 +501,7 @@ export type Database = {
       get_diagram_by_share_token: {
         Args: { token: string }
         Returns: {
+          content_hash: string | null
           created_at: string
           deleted_at: string | null
           edge_count: number

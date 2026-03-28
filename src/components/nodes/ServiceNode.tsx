@@ -1,11 +1,14 @@
 import { memo, useState, useEffect } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Box, Database, Server, Library } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { DiagramNodeData } from '@/types/diagram';
 import { normalizeInternalDb } from '@/types/diagram';
 import { useDiagramStore } from '@/store/diagramStore';
 import { getDbColor } from '@/constants/databaseColors';
 import { useTranslation } from 'react-i18next';
+
+const sanitize = (text: string) => DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
 
 function EditableDbItem({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -109,7 +112,7 @@ const ServiceNode = memo(({ data, id, selected }: NodeProps) => {
             className="text-sm font-semibold text-foreground cursor-pointer truncate"
             onDoubleClick={handleDoubleClick}
           >
-            {label}
+            {sanitize(label)}
           </span>
         )}
       </div>
