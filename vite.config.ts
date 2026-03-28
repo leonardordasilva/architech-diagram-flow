@@ -7,7 +7,7 @@ const fallbackSupabasePublishableKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiYWx1bnFiaXdrdnZ2Y25qbXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODc3NTEsImV4cCI6MjA5MDI2Mzc1MX0.ji1iwiwlxCjJu5WmI8B4HV6rZGDEQS240jaSgc0p3T0";
 
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
+export default defineConfig({
   define: {
     "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
       process.env.VITE_SUPABASE_URL ?? fallbackSupabaseUrl,
@@ -30,7 +30,7 @@ export default defineConfig(() => ({
   html: {
     cspNonce: "placeholder",
   },
-  worker: { format: "es" },
+  worker: { format: "es" as const },
   build: {
     rollupOptions: {
       output: {
@@ -43,4 +43,4 @@ export default defineConfig(() => ({
       },
     },
   },
-}));
+});
