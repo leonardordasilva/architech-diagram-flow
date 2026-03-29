@@ -467,7 +467,13 @@
     "avatarUploadError": "Failed to upload photo",
     "avatarInvalidType": "Invalid format. Use JPG, PNG, WebP or GIF.",
     "avatarTooLarge": "File too large. Maximum 2 MB.",
-    "resetPasswordError": "Failed to reset password"
+    "resetPasswordError": "Failed to reset password",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirmTitle": "Delete your account?",
+    "deleteAccountConfirmDesc": "This action is permanent and cannot be undone. All your diagrams, workspaces, and data will be permanently deleted.",
+    "deleteAccountConfirmButton": "Yes, delete my account",
+    "deleteAccountSuccess": "Account deleted successfully.",
+    "deleteAccountError": "Failed to delete account. Please try again."
   },
   "landing": {
     "nav": {
