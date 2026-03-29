@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Mail, KeyRound, LogOut, Camera, Loader2, X, Languages } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Mail, KeyRound, LogOut, Camera, Loader2, X, Languages, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +37,8 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch current avatar on open
   useEffect(() => {
@@ -257,8 +263,56 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
               <LogOut className="h-4 w-4" />
               {t('account.signOut')}
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              {t('account.deleteAccount')}
+            </Button>
           </div>
         </div>
+
+        {/* Delete account confirmation */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('account.deleteAccountConfirmTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('account.deleteAccountConfirmDesc')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleting}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  setDeleting(true);
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const { error } = await supabase.functions.invoke('delete-account', {
+                      headers: { Authorization: `Bearer ${session?.access_token}` },
+                    });
+                    if (error) throw error;
+                    toast({ title: t('account.deleteAccountSuccess') });
+                    onOpenChange(false);
+                    await supabase.auth.signOut();
+                    window.location.href = '/';
+                  } catch (err: any) {
+                    toast({ title: t('account.deleteAccountError'), description: err.message, variant: 'destructive' });
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {t('account.deleteAccountConfirmButton')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
