@@ -176,7 +176,7 @@ export async function loadUserDiagrams(
   page = 0,
 ): Promise<{ diagrams: DiagramRecord[]; hasMore: boolean }> {
   const from = page * PAGE_SIZE;
-  const to = from + PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
   const { data, error } = await supabase
     .from('diagrams')
     .select('*')
@@ -196,8 +196,8 @@ export async function loadUserDiagrams(
       console.warn('Diagrama corrompido ignorado:', result.reason);
     }
   }
-  const hasMore = rows.length > PAGE_SIZE;
-  return { diagrams: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore };
+  const hasMore = (data?.length ?? 0) === PAGE_SIZE;
+  return { diagrams: rows, hasMore };
 }
 
 export async function loadDiagramById(id: string): Promise<DiagramRecord | null> {
