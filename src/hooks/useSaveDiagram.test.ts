@@ -25,16 +25,16 @@ describe('saveDiagram', () => {
     // Override MSW handlers for each test to use valid UUIDs
     mswServer.use(
       http.post(`${BASE}/rest/v1/diagrams`, () =>
-        HttpResponse.json([{
+        HttpResponse.json({
           id: D1, title: 'New Diagram', owner_id: U1,
           share_token: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:01Z',
-        }], { status: 201 }),
+        }, { status: 201, headers: { 'content-type': 'application/json' } }),
       ),
       http.patch(`${BASE}/rest/v1/diagrams`, () =>
-        HttpResponse.json([{
+        HttpResponse.json({
           id: D2, title: 'Updated', owner_id: U1,
           share_token: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:02Z',
-        }], { status: 200 }),
+        }, { status: 200, headers: { 'content-type': 'application/json' } }),
       ),
     );
   });
@@ -72,10 +72,10 @@ describe('saveDiagram', () => {
     mswServer.use(
       http.post(`${BASE}/rest/v1/diagrams`, async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([{
+        return HttpResponse.json({
           id: D1, title: 'WS', owner_id: U1,
           share_token: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:03Z',
-        }], { status: 201 });
+        }, { status: 201, headers: { 'content-type': 'application/json' } });
       }),
     );
     await saveDiagram('WS', [], [], U1, undefined, WS);
