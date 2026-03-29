@@ -20,14 +20,6 @@ describe('useRealtimeCollab — payload validation', () => {
         data: { protocol: 'REST' },
       },
     ];
-    const validEdges = [
-      {
-        id: 'edge-1',
-        source: 'node-1',
-        target: 'node-2',
-        data: { protocol: 'REST', label: 'calls' },
-      },
-    ];
 
     const nodesParsed = DbDiagramNodesSchema.safeParse(validNodes);
     const edgesParsed = DbDiagramEdgesSchema.safeParse(validEdges);
