@@ -466,7 +466,13 @@
     "avatarUploadError": "Erro ao fazer upload da foto",
     "avatarInvalidType": "Formato inválido. Use JPG, PNG, WebP ou GIF.",
     "avatarTooLarge": "Arquivo muito grande. Máximo de 2 MB.",
-    "resetPasswordError": "Erro ao redefinir senha"
+    "resetPasswordError": "Erro ao redefinir senha",
+    "deleteAccount": "Excluir Conta",
+    "deleteAccountConfirmTitle": "Excluir sua conta?",
+    "deleteAccountConfirmDesc": "Esta ação é permanente e não pode ser desfeita. Todos os seus diagramas, workspaces e dados serão excluídos permanentemente.",
+    "deleteAccountConfirmButton": "Sim, excluir minha conta",
+    "deleteAccountSuccess": "Conta excluída com sucesso.",
+    "deleteAccountError": "Falha ao excluir conta. Tente novamente."
   },
   "landing": {
     "nav": {
