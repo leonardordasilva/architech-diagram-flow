@@ -9,7 +9,15 @@ describe('useRealtimeCollab — payload validation', () => {
         id: 'node-1',
         type: 'service',
         position: { x: 0, y: 0 },
-        data: { label: 'API Gateway', description: '', techStack: [], protocol: 'REST' },
+        data: { label: 'API Gateway', type: 'service' },
+      },
+    ];
+    const validEdges = [
+      {
+        id: 'edge-1',
+        source: 'node-1',
+        target: 'node-2',
+        data: { protocol: 'REST' },
       },
     ];
     const validEdges = [
@@ -60,14 +68,14 @@ describe('useRealtimeCollab — payload validation', () => {
   });
 
   it('accepts nodes with all supported types', () => {
-    const nodeTypes = ['service', 'database', 'queue', 'external'];
+    const nodeTypes = ['service', 'database', 'queue', 'external'] as const;
     for (const type of nodeTypes) {
       const nodes = [
         {
           id: `node-${type}`,
           type,
           position: { x: 100, y: 200 },
-          data: { label: `Test ${type}`, description: '', techStack: [], protocol: 'REST' },
+          data: { label: `Test ${type}`, type },
         },
       ];
       const result = DbDiagramNodesSchema.safeParse(nodes);
