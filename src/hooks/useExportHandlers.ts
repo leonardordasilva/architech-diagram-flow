@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useReactFlow, getNodesBounds } from '@xyflow/react';
 import { toPng, toSvg } from 'html-to-image';
 import { toast } from '@/hooks/use-toast';
+import { useShallow } from 'zustand/react/shallow';
 import { useDiagramStore } from '@/store/diagramStore';
 import { exportToMermaid } from '@/services/exportService';
 
@@ -85,10 +86,14 @@ async function applyWatermark(dataUrl: string): Promise<string> {
 export function useExportHandlers(darkMode: boolean, watermarkEnabled = false) {
   const { t } = useTranslation();
   const { getNodes: getFlowNodes } = useReactFlow();
-  const nodes = useDiagramStore((s) => s.nodes);
-  const edges = useDiagramStore((s) => s.edges);
-  const diagramName = useDiagramStore((s) => s.diagramName);
-  const exportJSON = useDiagramStore((s) => s.exportJSON);
+  const { nodes, edges, diagramName, exportJSON } = useDiagramStore(
+    useShallow((s) => ({
+      nodes: s.nodes,
+      edges: s.edges,
+      diagramName: s.diagramName,
+      exportJSON: s.exportJSON,
+    })),
+  );
 
   const handleExportPNG = useCallback(async () => {
     const flowNodes = getFlowNodes();

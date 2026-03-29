@@ -28,11 +28,8 @@ interface ToolbarProps {
   onDiagramNameChange: (name: string) => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
-  /** Formats allowed by current plan (e.g. ['png','json']). Defaults to all. */
   allowedExportFormats?: string[];
-  /** Called when user clicks a locked export format */
   onUpgradeRequest?: (featureName: string) => void;
-  /** When true, all editing actions are disabled (plan limit reached on unsaved canvas) */
   actionsDisabled?: boolean;
 }
 
@@ -74,14 +71,23 @@ function ToolbarButton({
   );
 }
 
-function DatabaseDropdown({ onSelect, actionsDisabled, onDisabledClick }: { onSelect: (subType: string) => void; actionsDisabled?: boolean; onDisabledClick?: () => void }) {
+interface ToolbarDropdownProps {
+  icon: React.ElementType;
+  label: string;
+  actionsDisabled?: boolean;
+  onDisabledClick?: () => void;
+  children: React.ReactNode;
+}
+
+function ToolbarDropdown({ icon: Icon, label, actionsDisabled, onDisabledClick, children }: ToolbarDropdownProps) {
   const { t } = useTranslation();
   if (actionsDisabled) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-9 w-9 opacity-40 cursor-not-allowed" onClick={onDisabledClick} aria-disabled>
-            <Database className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-9 w-9 opacity-40 cursor-not-allowed"
+            onClick={onDisabledClick} aria-disabled aria-label={t('limits.toolbarLockedUnsaved')}>
+            <Icon className="h-4 w-4" />
             <ChevronDown className="h-3 w-3 ml-[-2px]" />
           </Button>
         </TooltipTrigger>
@@ -94,17 +100,16 @@ function DatabaseDropdown({ onSelect, actionsDisabled, onDisabledClick }: { onSe
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('toolbar.database')}>
-              <Database className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={label}>
+              <Icon className="h-4 w-4" />
               <ChevronDown className="h-3 w-3 ml-[-2px]" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">{t('toolbar.database')}</TooltipContent>
+        <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" className="z-50">
-        <DropdownMenuItem onClick={() => onSelect('Oracle')}>Oracle</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onSelect('Redis')}>Redis</DropdownMenuItem>
+        {children}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -122,7 +127,6 @@ function Toolbar({
   const { t } = useTranslation();
   const [localName, setLocalName] = useState(diagramName);
 
-  // saas0001: format lock helpers
   const isFormatAllowed = (format: string) =>
     !allowedExportFormats || allowedExportFormats.includes(format);
 
@@ -132,7 +136,6 @@ function Toolbar({
 
   const handleDisabledClick = () => onUpgradeRequest?.('Diagramas ilimitados');
 
-  // Sync when store changes externally (e.g. loadDiagram, RecoveryBanner)
   useEffect(() => {
     setLocalName(diagramName);
   }, [diagramName]);
@@ -176,73 +179,25 @@ function Toolbar({
       <Separator orientation="vertical" className="h-6" />
 
       <ToolbarButton icon={Box} label={t('toolbar.service')} onClick={() => onAddNode('service')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick} />
-      <DatabaseDropdown onSelect={(subType) => onAddNode('database', subType)} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick} />
 
-      {/* Queue dropdown */}
-      {actionsDisabled ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 opacity-40 cursor-not-allowed" onClick={handleDisabledClick} aria-disabled>
-              <Mail className="h-4 w-4" />
-              <ChevronDown className="h-3 w-3 ml-[-2px]" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">{t('limits.toolbarLockedUnsaved')}</TooltipContent>
-        </Tooltip>
-      ) : (
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('toolbar.queue')}>
-                  <Mail className="h-4 w-4" />
-                  <ChevronDown className="h-3 w-3 ml-[-2px]" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">{t('toolbar.queue')}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" className="z-50">
-            <DropdownMenuItem onClick={() => onAddNode('queue', 'IBM MQ')}>IBM MQ</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddNode('queue', 'Kafka')}>Kafka</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddNode('queue', 'RabbitMQ')}>RabbitMQ</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <ToolbarDropdown icon={Database} label={t('toolbar.database')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'Oracle')}>Oracle</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'Redis')}>Redis</DropdownMenuItem>
+      </ToolbarDropdown>
 
-      {/* External/API dropdown */}
-      {actionsDisabled ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 opacity-40 cursor-not-allowed" onClick={handleDisabledClick} aria-disabled>
-              <Globe className="h-4 w-4" />
-              <ChevronDown className="h-3 w-3 ml-[-2px]" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">{t('limits.toolbarLockedUnsaved')}</TooltipContent>
-        </Tooltip>
-      ) : (
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('toolbar.api')}>
-                  <Globe className="h-4 w-4" />
-                  <ChevronDown className="h-3 w-3 ml-[-2px]" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">{t('toolbar.api')}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" className="z-50">
-            <DropdownMenuItem onClick={() => onAddNode('external', 'REST')}>REST</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddNode('external', 'gRPC')}>gRPC</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddNode('external', 'GraphQL')}>GraphQL</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddNode('external', 'WebSocket')}>WebSocket</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAddNode('external', 'HTTPS')}>HTTPS</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <ToolbarDropdown icon={Mail} label={t('toolbar.queue')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
+        <DropdownMenuItem onClick={() => onAddNode('queue', 'IBM MQ')}>IBM MQ</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('queue', 'Kafka')}>Kafka</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('queue', 'RabbitMQ')}>RabbitMQ</DropdownMenuItem>
+      </ToolbarDropdown>
+
+      <ToolbarDropdown icon={Globe} label={t('toolbar.api')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
+        <DropdownMenuItem onClick={() => onAddNode('external', 'REST')}>REST</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('external', 'gRPC')}>gRPC</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('external', 'GraphQL')}>GraphQL</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('external', 'WebSocket')}>WebSocket</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('external', 'HTTPS')}>HTTPS</DropdownMenuItem>
+      </ToolbarDropdown>
 
       <Separator orientation="vertical" className="h-6" />
 
@@ -251,107 +206,55 @@ function Toolbar({
       <ToolbarButton icon={Undo2} label={t('toolbar.undo')} onClick={onUndo} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick} />
       <ToolbarButton icon={Redo2} label={t('toolbar.redo')} onClick={onRedo} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick} />
 
-      {/* Auto-layout dropdown */}
-      {actionsDisabled ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 opacity-40 cursor-not-allowed" onClick={handleDisabledClick} aria-disabled>
-              <LayoutGrid className="h-4 w-4" />
-              <ChevronDown className="h-3 w-3 ml-[-2px]" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">{t('limits.toolbarLockedUnsaved')}</TooltipContent>
-        </Tooltip>
-      ) : (
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('toolbar.autoLayout')}>
-                  <LayoutGrid className="h-4 w-4" />
-                  <ChevronDown className="h-3 w-3 ml-[-2px]" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">{t('toolbar.autoLayout')}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" className="z-50">
-            <DropdownMenuItem onClick={() => onAutoLayout('elk', 'LR')}>{t('toolbar.elkLR')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAutoLayout('elk', 'TB')}>{t('toolbar.elkTB')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAutoLayout('dagre', 'LR')}>{t('toolbar.dagreH')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAutoLayout('dagre', 'TB')}>{t('toolbar.dagreV')}</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <ToolbarDropdown icon={LayoutGrid} label={t('toolbar.autoLayout')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
+        <DropdownMenuItem onClick={() => onAutoLayout('elk', 'LR')}>{t('toolbar.elkLR')}</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAutoLayout('elk', 'TB')}>{t('toolbar.elkTB')}</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAutoLayout('dagre', 'LR')}>{t('toolbar.dagreH')}</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAutoLayout('dagre', 'TB')}>{t('toolbar.dagreV')}</DropdownMenuItem>
+      </ToolbarDropdown>
 
       <Separator orientation="vertical" className="h-6" />
 
-      {/* Export dropdown */}
-      {actionsDisabled ? (
+      <ToolbarDropdown icon={Download} label={t('toolbar.export')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
+        <DropdownMenuItem onClick={onExportPNG} className="gap-2">
+          <Image className="h-4 w-4" /> PNG
+        </DropdownMenuItem>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 opacity-40 cursor-not-allowed" onClick={handleDisabledClick} aria-disabled>
-              <Download className="h-4 w-4" />
-              <ChevronDown className="h-3 w-3 ml-[-2px]" />
-            </Button>
+            <DropdownMenuItem
+              className="gap-2"
+              onClick={isFormatAllowed('svg') ? onExportSVG : () => handleLockedFormat('SVG')}
+              disabled={false}
+            >
+              <FileImage className="h-4 w-4" />
+              SVG
+              {!isFormatAllowed('svg') && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+            </DropdownMenuItem>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">{t('limits.toolbarLockedUnsaved')}</TooltipContent>
+          {!isFormatAllowed('svg') && (
+            <TooltipContent side="right" className="text-xs">{t('limits.availableOnPro')}</TooltipContent>
+          )}
         </Tooltip>
-      ) : (
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('toolbar.export')}>
-                  <Download className="h-4 w-4" />
-                  <ChevronDown className="h-3 w-3 ml-[-2px]" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">{t('toolbar.export')}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="start" className="z-50">
-            <DropdownMenuItem onClick={onExportPNG} className="gap-2">
-              <Image className="h-4 w-4" /> PNG
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuItem
+              className="gap-2"
+              onClick={isFormatAllowed('mermaid') ? onExportMermaid : () => handleLockedFormat('Mermaid.js')}
+              disabled={false}
+            >
+              <FileCode className="h-4 w-4" />
+              Mermaid.js
+              {!isFormatAllowed('mermaid') && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
             </DropdownMenuItem>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuItem
-                  className="gap-2"
-                  onClick={isFormatAllowed('svg') ? onExportSVG : () => handleLockedFormat('SVG')}
-                  disabled={false}
-                >
-                  <FileImage className="h-4 w-4" />
-                  SVG
-                  {!isFormatAllowed('svg') && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
-                </DropdownMenuItem>
-              </TooltipTrigger>
-              {!isFormatAllowed('svg') && (
-                <TooltipContent side="right" className="text-xs">{t('limits.availableOnPro')}</TooltipContent>
-              )}
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuItem
-                  className="gap-2"
-                  onClick={isFormatAllowed('mermaid') ? onExportMermaid : () => handleLockedFormat('Mermaid.js')}
-                  disabled={false}
-                >
-                  <FileCode className="h-4 w-4" />
-                  Mermaid.js
-                  {!isFormatAllowed('mermaid') && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
-                </DropdownMenuItem>
-              </TooltipTrigger>
-              {!isFormatAllowed('mermaid') && (
-                <TooltipContent side="right" className="text-xs">{t('limits.availableOnPro')}</TooltipContent>
-              )}
-            </Tooltip>
-            <DropdownMenuItem onClick={onExportJSON} className="gap-2">
-              <FileJson className="h-4 w-4" /> JSON
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+          </TooltipTrigger>
+          {!isFormatAllowed('mermaid') && (
+            <TooltipContent side="right" className="text-xs">{t('limits.availableOnPro')}</TooltipContent>
+          )}
+        </Tooltip>
+        <DropdownMenuItem onClick={onExportJSON} className="gap-2">
+          <FileJson className="h-4 w-4" /> JSON
+        </DropdownMenuItem>
+      </ToolbarDropdown>
 
       <ToolbarButton icon={Upload} label={t('toolbar.importJSON')} onClick={onImportJSON} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick} />
 
