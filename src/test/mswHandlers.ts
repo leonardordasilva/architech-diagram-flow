@@ -1,7 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-// Use a wildcard pattern to intercept any Supabase URL
-const SUPABASE_URL = '*';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? 'http://localhost:54321';
 
 /** Handlers that mock Supabase REST + Edge Function endpoints */
 export const handlers = [

@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { mswServer } from '@/test/mswServer';
 import { useDiagramStore } from '@/store/diagramStore';
-import { usePlanStore } from '@/store/planStore';
 
-// Mock the crypto service to avoid actual Edge Function calls in unit context
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000001';
+const TEST_DIAGRAM_ID = '00000000-0000-0000-0000-000000000002';
+const TEST_WS_ID = '00000000-0000-0000-0000-000000000003';
 vi.mock('@/services/cryptoService', () => ({
   encryptDiagramData: vi.fn(async (nodes: unknown, edges: unknown) => ({
     nodes: { iv: 'iv', ciphertext: 'ct' },
