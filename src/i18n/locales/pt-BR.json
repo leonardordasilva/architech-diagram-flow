@@ -239,7 +239,9 @@
     "validationFailed": "Validação falhou",
     "invalidJSON": "JSON inválido",
     "invalidFormat": "Formato inválido",
-    "jsonOnly": "Apenas arquivos .json são aceitos"
+    "jsonOnly": "Apenas arquivos .json são aceitos",
+    "tooLarge": "Arquivo muito grande",
+    "tooLargeDesc": "O tamanho máximo permitido é {{max}}. Reduza o diagrama e tente novamente."
   },
   "mermaidModal": {
     "title": "Exportar Mermaid.js",

@@ -10,6 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import { ImportDiagramSchema } from '@/schemas/diagramSchema';
 import { ZodError } from 'zod';
 
+const MAX_IMPORT_SIZE = 2 * 1024 * 1024; // 2 MB
+
 interface ImportJSONModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,6 +25,14 @@ export default function ImportJSONModal({ open, onOpenChange, onImport }: Import
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = () => {
+    if (jsonText.length > MAX_IMPORT_SIZE) {
+      toast({
+        title: t('importModal.tooLarge'),
+        description: t('importModal.tooLargeDesc', { max: '2 MB' }),
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       const parsed = JSON.parse(jsonText);
       const validated = ImportDiagramSchema.parse(parsed);
@@ -42,6 +52,14 @@ export default function ImportJSONModal({ open, onOpenChange, onImport }: Import
   const processFile = (file: File) => {
     if (!file.name.endsWith('.json')) {
       toast({ title: t('importModal.invalidFormat'), description: t('importModal.jsonOnly'), variant: 'destructive' });
+      return;
+    }
+    if (file.size > MAX_IMPORT_SIZE) {
+      toast({
+        title: t('importModal.tooLarge'),
+        description: t('importModal.tooLargeDesc', { max: '2 MB' }),
+        variant: 'destructive',
+      });
       return;
     }
     const reader = new FileReader();
