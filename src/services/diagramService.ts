@@ -26,6 +26,8 @@ export interface DiagramRecord {
   share_token: string | null;
   created_at: string;
   updated_at: string;
+  /** F4-T1: Set when content_hash verification fails */
+  integrityWarning?: string;
 }
 
 /** Convert a Supabase row into our typed DiagramRecord, decrypting if needed */
@@ -55,6 +57,17 @@ async function toDiagramRecord(row: DiagramRow): Promise<DiagramRecord> {
       );
       if (recomputedHash !== row.content_hash) {
         console.warn(`[diagramService] content_hash mismatch for diagram ${row.id}. Expected: ${row.content_hash}, Got: ${recomputedHash}`);
+        return {
+          id: row.id,
+          title: row.title,
+          nodes: nodesParsed.data as DiagramNode[],
+          edges: edgesParsed.data as DiagramEdge[],
+          owner_id: row.owner_id,
+          share_token: row.share_token,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          integrityWarning: `content_hash mismatch: expected ${row.content_hash}, got ${recomputedHash}`,
+        };
       }
     } catch (hashErr) {
       console.warn(`[diagramService] Failed to verify content_hash for diagram ${row.id}:`, hashErr);
@@ -303,6 +316,27 @@ export async function saveSharedDiagram(
   nodes: DiagramNode[],
   edges: DiagramEdge[],
 ): Promise<void> {
+  // F2-T1: Use atomic edge function (same as saveDiagram)
+  try {
+    const { data, error } = await supabase.functions.invoke('save-diagram', {
+      body: {
+        title: '', // collaborators cannot change title — edge fn ignores for non-owners
+        nodes: JSON.parse(JSON.stringify(nodes)),
+        edges: JSON.parse(JSON.stringify(edges)),
+        diagram_id: diagramId,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return;
+  } catch (edgeFnErr: any) {
+    if (edgeFnErr?.message === 'Forbidden') {
+      throw new Error('Você não tem permissão de edição neste diagrama.');
+    }
+    console.warn('[diagramService] Edge function save-shared failed, falling back:', edgeFnErr?.message);
+  }
+
+  // Fallback: client-side encrypt+save
   const encrypted = await encryptDiagramData(
     JSON.parse(JSON.stringify(nodes)),
     JSON.parse(JSON.stringify(edges)),
@@ -353,9 +387,9 @@ export async function duplicateDiagram(id: string, ownerId: string): Promise<Dia
   );
 }
 
-export async function shareDiagram(diagramId: string): Promise<string | null> {
+export async function shareDiagram(diagramId: string, ttlDays = 30): Promise<string | null> {
   const { data, error } = await supabase.functions.invoke('share-diagram', {
-    body: { diagramId },
+    body: { diagramId, ttlDays },
   });
   if (error || !data?.shareToken) return null;
   // Build the URL from the current origin so it works in any environment

@@ -20,6 +20,9 @@ export function useDiagramRefresh() {
     try {
       const record = await loadDiagramById(diagramId);
       if (!record) { toast({ title: t('canvas.notFound'), variant: 'destructive' }); return; }
+      if (record.integrityWarning) {
+        toast({ title: t('integrity.warning'), description: t('integrity.hashMismatch'), variant: 'destructive', duration: 10000 });
+      }
       if (record.updated_at === lastLoadedUpdatedAtRef.current) {
         toast({ title: t('canvas.alreadyUpdated') });
       } else {

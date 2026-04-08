@@ -5,6 +5,7 @@ import DiagramCanvas from '@/components/DiagramCanvas';
 import { loadDiagramByToken } from '@/services/diagramService';
 import { useDiagramStore } from '@/store/diagramStore';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 
 export default function SharedDiagram() {
   const { t } = useTranslation();
@@ -29,6 +30,9 @@ export default function SharedDiagram() {
         const store = useDiagramStore.getState();
         store.loadDiagram(diagram.nodes, diagram.edges);
         store.setDiagramName(diagram.title);
+        if (diagram.integrityWarning) {
+          toast({ title: t('integrity.warning'), description: t('integrity.hashMismatch'), variant: 'destructive', duration: 10000 });
+        }
       } else {
         setNotFound(true);
       }

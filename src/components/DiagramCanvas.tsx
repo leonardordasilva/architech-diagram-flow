@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import UnsavedChangesDialog from '@/components/UnsavedChangesDialog';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -111,6 +112,24 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
   );
 
   const { user, signOut } = useAuth();
+  const [signOutDialogOpen, setSignOutDialogOpen] = useState(false);
+
+  const handleSignOutRequest = useCallback(() => {
+    const isDirty = useDiagramStore.getState().isDirty;
+    if (isDirty) { setSignOutDialogOpen(true); return; }
+    signOut();
+  }, [signOut]);
+
+  const handleSaveAndLeave = useCallback(async () => {
+    setSignOutDialogOpen(false);
+    await handleSaveToCloudRef.current?.();
+    signOut();
+  }, [signOut]);
+
+  const handleLeaveWithout = useCallback(() => {
+    setSignOutDialogOpen(false);
+    signOut();
+  }, [signOut]);
 
   // saas0001: plan limits
   const planLimits = usePlanLimits();
@@ -244,7 +263,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
               refreshing={refreshing}
               onSave={handleSaveToCloud}
               onRefresh={handleRefreshDiagram}
-              onSignOut={signOut}
+              onSignOut={handleSignOutRequest}
               onOpenBilling={() => setBillingOpen(true)}
               onOpenAccount={() => setAccountOpen(true)}
               onOpenMyDiagrams={() => setMyDiagramsOpen(true)}
@@ -329,6 +348,12 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
       <BillingModal open={billingOpen} onOpenChange={setBillingOpen} />
       <AccountModal open={accountOpen} onOpenChange={setAccountOpen} />
       <MyDiagramsModal open={myDiagramsOpen} onOpenChange={setMyDiagramsOpen} />
+      <UnsavedChangesDialog
+        open={signOutDialogOpen}
+        onOpenChange={setSignOutDialogOpen}
+        onSaveAndLeave={handleSaveAndLeave}
+        onLeaveWithout={handleLeaveWithout}
+      />
     </div>
   );
 }
