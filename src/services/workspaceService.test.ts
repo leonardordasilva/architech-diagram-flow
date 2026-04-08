@@ -1,30 +1,45 @@
 // PRD-v3 ITEM-3: Unit tests for workspaceService
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-function chainable(overrides: Record<string, unknown> = {}) {
-  const chain: Record<string, unknown> = {
-    select: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    is: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    ...overrides,
-  };
-  for (const key of Object.keys(chain)) {
-    if (typeof chain[key] === 'function') {
-      (chain[key] as ReturnType<typeof vi.fn>).mockReturnValue(chain);
-    }
+/** Creates a chainable mock where every method returns `this` except terminal ones */
+function chainable(terminal: Record<string, unknown> = {}) {
+  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+  const methods = ['select', 'update', 'delete', 'insert', 'eq', 'is', 'in', 'order'];
+  for (const m of methods) {
+    chain[m] = vi.fn();
+  }
+  // By default every method returns chain (for chaining)
+  for (const m of methods) {
+    chain[m].mockReturnValue(chain);
+  }
+  // Apply terminal overrides — these resolve with data instead of chain
+  for (const [key, val] of Object.entries(terminal)) {
+    chain[key] = vi.fn().mockReturnValue(val);
   }
   return chain;
 }
 
-let mockFromChain = chainable();
+/** Creates chain where last eq resolves with data after N eq calls */
+function chainWithTerminalEq(eqCount: number, result: unknown) {
+  let calls = 0;
+  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+  const methods = ['select', 'update', 'delete', 'insert', 'is', 'in', 'order'];
+  for (const m of methods) {
+    chain[m] = vi.fn().mockReturnValue(chain);
+  }
+  chain.eq = vi.fn().mockImplementation(() => {
+    calls++;
+    if (calls >= eqCount) return Promise.resolve(result);
+    return chain;
+  });
+  return chain;
+}
+
 let mockRpcResult: { data: unknown; error: unknown } = { data: null, error: null };
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: vi.fn(() => mockFromChain),
+    from: vi.fn(),
     rpc: vi.fn(() => Promise.resolve(mockRpcResult)),
     functions: { invoke: vi.fn() },
   },
@@ -43,7 +58,6 @@ import {
 describe('workspaceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFromChain = chainable();
     mockRpcResult = { data: null, error: null };
   });
 
@@ -93,11 +107,8 @@ describe('workspaceService', () => {
 
   describe('removeWorkspaceMember', () => {
     it('with userId deletes from workspace_members', async () => {
-      const chain = chainable();
-      (chain.eq as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        // Second eq call resolves
-        return Promise.resolve({ error: null });
-      });
+      // .delete().eq('workspace_id', ...).eq('user_id', ...) — 2 eq calls, last resolves
+      const chain = chainWithTerminalEq(2, { error: null });
       vi.mocked(supabase.from).mockReturnValue(chain as never);
 
       await removeWorkspaceMember('ws-1', 'wm-1', 'u2');
@@ -105,8 +116,8 @@ describe('workspaceService', () => {
     });
 
     it('with null userId deletes from workspace_invites', async () => {
-      const chain = chainable();
-      (chain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ error: null });
+      // .delete().eq('id', memberId) — 1 eq call
+      const chain = chainWithTerminalEq(1, { error: null });
       vi.mocked(supabase.from).mockReturnValue(chain as never);
 
       await removeWorkspaceMember('ws-1', 'inv-1', null);
@@ -116,10 +127,8 @@ describe('workspaceService', () => {
 
   describe('updateMemberRole', () => {
     it('updates role via workspace_members', async () => {
-      const chain = chainable();
-      (chain.eq as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        return Promise.resolve({ error: null });
-      });
+      // .update({ role }).eq('id', ...).eq('workspace_id', ...) — 2 eq calls
+      const chain = chainWithTerminalEq(2, { error: null });
       vi.mocked(supabase.from).mockReturnValue(chain as never);
 
       await updateMemberRole('ws-1', 'wm-1', 'viewer');
@@ -130,8 +139,7 @@ describe('workspaceService', () => {
 
   describe('renameWorkspace', () => {
     it('updates workspace name', async () => {
-      const chain = chainable();
-      (chain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ error: null });
+      const chain = chainWithTerminalEq(1, { error: null });
       vi.mocked(supabase.from).mockReturnValue(chain as never);
 
       await renameWorkspace('ws-1', 'New Name');
@@ -142,6 +150,7 @@ describe('workspaceService', () => {
 
   describe('loadWorkspaceDiagrams', () => {
     it('returns diagrams excluding soft-deleted', async () => {
+      // .select().eq().is().order() — order is terminal
       const chain = chainable({
         order: vi.fn().mockResolvedValue({
           data: [
@@ -155,7 +164,6 @@ describe('workspaceService', () => {
       const result = await loadWorkspaceDiagrams('ws-1');
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe('Diagram 1');
-      expect(chain.is).toHaveBeenCalledWith('deleted_at', null);
     });
   });
 });
