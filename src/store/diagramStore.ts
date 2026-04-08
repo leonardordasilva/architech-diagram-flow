@@ -29,6 +29,8 @@ interface DiagramState {
   isAnalyzing: boolean;
   analysisResult: string | null;
   isCollaborator: boolean;
+  /** T5: True when canvas has unsaved changes */
+  isDirty: boolean;
 }
 
 interface DiagramActions {
@@ -39,6 +41,7 @@ interface DiagramActions {
   setIsAnalyzing: (value: boolean) => void;
   setAnalysisResult: (result: string | null) => void;
   setIsCollaborator: (value: boolean) => void;
+  setIsDirty: (value: boolean) => void;
 
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -125,14 +128,14 @@ export const useDiagramStore = create<DiagramStore>()(
         if (!changes || changes.length === 0) return;
         const current = get().nodes;
         const updated = applyNodeChanges(changes, current) as DiagramNode[];
-        if (updated !== current) set({ nodes: updated });
+        if (updated !== current) set({ nodes: updated, isDirty: true });
       },
 
       onEdgesChange: (changes) => {
         if (!changes || changes.length === 0) return;
         const current = get().edges;
         const updated = applyEdgeChanges(changes, current) as DiagramEdge[];
-        if (updated !== current) set({ edges: updated });
+        if (updated !== current) set({ edges: updated, isDirty: true });
       },
 
       // FUNC-03 / PERF-02: onConnect reads nodes inside set() callback, validates with canConnect
@@ -316,9 +319,9 @@ export const useDiagramStore = create<DiagramStore>()(
         set({ nodes: Array.isArray(layoutedNodes) ? layoutedNodes : [], edges: Array.isArray(layoutedEdges) ? layoutedEdges : [] });
       },
 
-      clearCanvas: () => set({ nodes: [], edges: [], isCollaborator: false, currentDiagramId: undefined }),
+      clearCanvas: () => set({ nodes: [], edges: [], isCollaborator: false, currentDiagramId: undefined, isDirty: false }),
 
-      loadDiagram: (nodes, edges) => set({ nodes: Array.isArray(nodes) ? nodes : [], edges: Array.isArray(edges) ? edges : [], isCollaborator: false }),
+      loadDiagram: (nodes, edges) => set({ nodes: Array.isArray(nodes) ? nodes : [], edges: Array.isArray(edges) ? edges : [], isCollaborator: false, isDirty: false }),
 
       // PERF-03: Project only essential fields in exported JSON
       exportJSON: () => {
