@@ -118,24 +118,22 @@ describe('shareService', () => {
 
   describe('listDiagramShares', () => {
     it('returns enriched shares with emails', async () => {
+      const sharesChain = chainable();
+      (sharesChain.order as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: [{ id: 's1', diagram_id: 'd1', owner_id: 'o1', shared_with_id: 'u2', created_at: '2026-01-01' }],
+        error: null,
+      });
+
+      const profilesChain = chainable();
+      (profilesChain.in as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: [{ id: 'u2', email: 'collab@test.com' }],
+        error: null,
+      });
+
       let callCount = 0;
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
+      vi.mocked(supabase.from).mockImplementation(() => {
         callCount++;
-        if (table === 'diagram_shares' || callCount === 1) {
-          return chainable({
-            order: vi.fn().mockResolvedValue({
-              data: [{ id: 's1', diagram_id: 'd1', owner_id: 'o1', shared_with_id: 'u2', created_at: '2026-01-01' }],
-              error: null,
-            }),
-          }) as never;
-        }
-        // profiles
-        return chainable({
-          in: vi.fn().mockResolvedValue({
-            data: [{ id: 'u2', email: 'collab@test.com' }],
-            error: null,
-          }),
-        }) as never;
+        return (callCount === 1 ? sharesChain : profilesChain) as never;
       });
 
       const result = await listDiagramShares('d1');
@@ -155,34 +153,30 @@ describe('shareService', () => {
 
   describe('loadSharedWithMe', () => {
     it('returns decrypted and validated diagrams', async () => {
+      const sharesChain = chainable();
+      (sharesChain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: [{ diagram_id: 'd1', owner_id: 'o1' }],
+        error: null,
+      });
+
+      const diagramsChain = chainable();
+      (diagramsChain.in as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: [{ id: 'd1', title: 'Shared Diagram', updated_at: '2026-01-01', nodes: [], edges: [], owner_id: 'o1' }],
+        error: null,
+      });
+
+      const profilesChain = chainable();
+      (profilesChain.in as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: [{ id: 'o1', email: 'owner@test.com' }],
+        error: null,
+      });
+
       let callCount = 0;
       vi.mocked(supabase.from).mockImplementation(() => {
         callCount++;
-        if (callCount === 1) {
-          // diagram_shares
-          return chainable({
-            eq: vi.fn().mockResolvedValue({
-              data: [{ diagram_id: 'd1', owner_id: 'o1' }],
-              error: null,
-            }),
-          }) as never;
-        }
-        if (callCount === 2) {
-          // diagrams
-          return chainable({
-            in: vi.fn().mockResolvedValue({
-              data: [{ id: 'd1', title: 'Shared Diagram', updated_at: '2026-01-01', nodes: [], edges: [], owner_id: 'o1' }],
-              error: null,
-            }),
-          }) as never;
-        }
-        // profiles
-        return chainable({
-          in: vi.fn().mockResolvedValue({
-            data: [{ id: 'o1', email: 'owner@test.com' }],
-            error: null,
-          }),
-        }) as never;
+        if (callCount === 1) return sharesChain as never;
+        if (callCount === 2) return diagramsChain as never;
+        return profilesChain as never;
       });
 
       const result = await loadSharedWithMe('user-2');
