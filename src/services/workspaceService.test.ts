@@ -2,19 +2,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /** Creates a chainable mock where every method returns `this` except terminal ones */
-function chainable(terminal: Record<string, unknown> = {}) {
+function chainable(terminal: Record<string, ReturnType<typeof vi.fn>> = {}) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   const methods = ['select', 'update', 'delete', 'insert', 'eq', 'is', 'in', 'order'];
   for (const m of methods) {
-    chain[m] = vi.fn();
+    chain[m] = vi.fn().mockReturnValue(chain);
   }
-  // By default every method returns chain (for chaining)
-  for (const m of methods) {
-    chain[m].mockReturnValue(chain);
-  }
-  // Apply terminal overrides — these resolve with data instead of chain
-  for (const [key, val] of Object.entries(terminal)) {
-    chain[key] = vi.fn().mockReturnValue(val);
+  // Apply terminal overrides — these are pre-configured mock fns
+  for (const [key, fn] of Object.entries(terminal)) {
+    chain[key] = fn;
   }
   return chain;
 }
