@@ -75,6 +75,7 @@ export const useDiagramStore = create<DiagramStore>()(
       isAnalyzing: false,
       analysisResult: null,
       isCollaborator: false,
+      isDirty: false,
 
       // Setters
       // FUNC-02: setNodes also syncs edge colors when source node changes
