@@ -466,6 +466,29 @@ describe('diagramStore', () => {
   });
 });
 
+// ── isDirty flag tests ──────────────────────────────────────────────────────
+describe('isDirty flag', () => {
+  beforeEach(() => { resetStore(); });
+
+  it('starts as false', () => {
+    expect(getState().isDirty).toBe(false);
+  });
+  it('setIsDirty(true) marks canvas as dirty', () => {
+    getState().setIsDirty(true);
+    expect(getState().isDirty).toBe(true);
+  });
+  it('clearCanvas resets isDirty to false', () => {
+    getState().setIsDirty(true);
+    getState().clearCanvas();
+    expect(getState().isDirty).toBe(false);
+  });
+  it('loadDiagram resets isDirty to false', () => {
+    getState().setIsDirty(true);
+    getState().loadDiagram([], []);
+    expect(getState().isDirty).toBe(false);
+  });
+});
+
 // ── Épico 8: Testes de contratos de segurança ──────────────────────────────
 
 describe('deleteDiagram signature (security contract)', () => {
