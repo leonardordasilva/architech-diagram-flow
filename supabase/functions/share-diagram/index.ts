@@ -16,23 +16,6 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-// ─── Rate Limiter ───────────────────────────────────────────
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 20;
-const RATE_WINDOW_MS = 60_000;
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -44,23 +27,16 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const jwt = authHeader.replace("Bearer ", "");
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
-
-    const jwt = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : null;
-    if (!jwt) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -70,13 +46,18 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser(jwt);
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Rate limit check
-    if (!checkRateLimit(user.id)) {
+    // F2-T2: Rate limit via persistent DB RPC
+    const rateLimitKey = `edge:share:${user.id}`;
+    const { data: allowed, error: rlError } = await supabaseAdmin.rpc('check_rate_limit', {
+      p_key: rateLimitKey,
+      p_limit: 20,
+      p_window_seconds: 60,
+    });
+    if (rlError || allowed === false) {
       return new Response(
         JSON.stringify({ error: "Too many requests. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -84,12 +65,11 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { diagramId } = body;
+    const { diagramId, ttlDays } = body as { diagramId?: string; ttlDays?: number };
 
     if (!diagramId || typeof diagramId !== "string") {
       return new Response(JSON.stringify({ error: "diagramId required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -114,10 +94,15 @@ serve(async (req) => {
       shareToken = crypto.randomUUID().replace(/-/g, "");
     }
 
+    // F4-T2: Set expiration on share tokens
+    const effectiveTtlDays = ttlDays ?? 30;
+    const expiresAt = new Date(Date.now() + effectiveTtlDays * 24 * 60 * 60 * 1000).toISOString();
+
     const { error: updateError } = await supabaseAdmin
       .from("diagrams")
       .update({
         share_token: shareToken,
+        share_token_expires_at: expiresAt,
         is_shared: true,
         updated_at: new Date().toISOString(),
       })

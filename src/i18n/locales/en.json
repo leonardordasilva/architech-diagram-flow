@@ -589,5 +589,16 @@
     "removeMember": "Remove",
     "roleBadge": "{{role}} in workspace",
     "contextWorkspace": "Workspace: {{name}}"
+  },
+  "unsavedDialog": {
+    "title": "Unsaved changes",
+    "description": "You have unsaved changes. Do you want to save before leaving?",
+    "saveAndLeave": "Save and Leave",
+    "leaveWithout": "Leave without Saving",
+    "cancel": "Cancel"
+  },
+  "integrity": {
+    "warning": "Integrity warning",
+    "hashMismatch": "The integrity hash of this diagram does not match. Data may have been modified outside the normal flow."
   }
 }
