@@ -35,7 +35,7 @@ export default function UnsavedChangesDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{t('unsavedDialog.cancel')}</AlertDialogCancel>
           <AlertDialogAction
-            variant="outline"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onLeaveWithout}
           >
             {t('unsavedDialog.leaveWithout')}
