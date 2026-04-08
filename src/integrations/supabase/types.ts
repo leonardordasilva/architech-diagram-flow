@@ -80,6 +80,7 @@ export type Database = {
           nodes: Json
           owner_id: string
           share_token: string | null
+          share_token_expires_at: string | null
           title: string
           updated_at: string
           workspace_id: string | null
@@ -96,6 +97,7 @@ export type Database = {
           nodes?: Json
           owner_id: string
           share_token?: string | null
+          share_token_expires_at?: string | null
           title?: string
           updated_at?: string
           workspace_id?: string | null
@@ -112,6 +114,7 @@ export type Database = {
           nodes?: Json
           owner_id?: string
           share_token?: string | null
+          share_token_expires_at?: string | null
           title?: string
           updated_at?: string
           workspace_id?: string | null
@@ -564,6 +567,7 @@ export type Database = {
           nodes: Json
           owner_id: string
           share_token: string | null
+          share_token_expires_at: string | null
           title: string
           updated_at: string
           workspace_id: string | null
