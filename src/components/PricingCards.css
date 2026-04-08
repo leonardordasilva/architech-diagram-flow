@@ -1,4 +1,4 @@
-/* M2: CSS custom properties for PricingCards.
+/* PRD-v3 ITEM-1: CSS classes for PricingCards.
    PricingCards always renders on a dark (#0f1520) background (Landing + UpgradeModal).
    Centralising colours here makes palette changes a single-line update. */
 :root {
@@ -14,7 +14,69 @@
   --pc-blue-dark: #2563eb;
 }
 
+/* ── Container ── */
+.p-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.p-header {
+  text-align: center;
+  margin-bottom: 48px;
+  animation: fadeInUp 0.6s ease both;
+}
+
+.p-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 100px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #93c5fd;
+  margin-bottom: 24px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.p-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 16px;
+  color: #f1f5f9;
+}
+
+.p-subtitle {
+  font-size: 18px;
+  color: #94a3b8;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
 /* ── Cycle toggle ── */
+.p-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 48px;
+}
+
+.p-toggle-group {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 5px;
+}
+
 .p-cycle-btn {
   border: none;
   border-radius: 8px;
@@ -39,6 +101,14 @@
   color: var(--pc-text-muted) !important;
 }
 
+/* ── Grid ── */
+.p-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
 /* ── Plan cards ── */
 .p-card {
   transition: transform 0.28s ease, box-shadow 0.28s ease !important;
@@ -46,6 +116,192 @@
 }
 .p-card:hover {
   transform: translateY(-6px) !important;
+}
+
+.p-card-base {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.p-card--default {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.p-card--highlight {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.05));
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2), 0 20px 60px rgba(59, 130, 246, 0.12);
+}
+
+.p-card--preselected {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25), 0 16px 48px rgba(245, 158, 11, 0.12);
+}
+
+/* ── Glow ── */
+.p-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Plan header ── */
+.p-plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.p-plan-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.p-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.p-icon-box--blue {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.p-icon-box--amber {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.p-icon-box--gray {
+  background: rgba(107, 114, 128, 0.15);
+}
+
+.p-plan-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #f1f5f9;
+}
+
+.p-popular-badge {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Price ── */
+.p-price-section {
+  margin-bottom: 28px;
+}
+
+.p-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.p-price-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: #f1f5f9;
+}
+
+.p-price-value--highlight {
+  color: #93c5fd;
+}
+
+.p-per-note {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ── Divider ── */
+.p-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin-bottom: 24px;
+}
+
+/* ── Feature list ── */
+.p-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.p-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--pc-text-muted);
+  line-height: 1.5;
+}
+
+.p-check-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Icons ── */
+.p-icon-sm {
+  width: 18px;
+  height: 18px;
+}
+
+.p-icon-xs {
+  width: 12px;
+  height: 12px;
+}
+
+.p-icon-check {
+  width: 10px;
+  height: 10px;
+  color: #4ade80;
+}
+
+.p-icon-loader {
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
 }
 
 /* ── CTA buttons ── */
@@ -121,20 +377,10 @@
   font-family: inherit;
 }
 .p-btn-blue:hover:not(:disabled) {
-  box-shadow: 0 0 28px rgba(59, 130, 246, 0.45), 0 6px 20px rgba(59, 130, 246, 0.2); /* intentional: rgba doesn't support CSS vars */
+  box-shadow: 0 0 28px rgba(59, 130, 246, 0.45), 0 6px 20px rgba(59, 130, 246, 0.2);
   transform: translateY(-1px);
 }
 .p-btn-blue:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-}
-
-/* ── Feature list items ── */
-.p-feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--pc-text-muted);
-  line-height: 1.5;
 }
