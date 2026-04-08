@@ -123,6 +123,7 @@ export const useDiagramStore = create<DiagramStore>()(
       setIsAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
       setAnalysisResult: (analysisResult) => set({ analysisResult }),
       setIsCollaborator: (isCollaborator) => set({ isCollaborator }),
+      setIsDirty: (isDirty) => set({ isDirty }),
 
       // QUA-05: React Flow handlers with reference comparison
       onNodesChange: (changes) => {
