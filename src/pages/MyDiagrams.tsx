@@ -1,3 +1,4 @@
+// PRD-v3 ITEM-2: Added integrityWarning toast on load + icon in listing
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DiagramNode, DiagramEdge } from '@/types/diagram';
@@ -153,12 +154,23 @@ export default function MyDiagramsModal({ open, onOpenChange }: MyDiagramsModalP
     renameMutation.mutate({ id, title: trimmed });
   };
 
+  // PRD-v3 ITEM-2: Show integrity warning toast when loading a diagram
   const handleLoad = (diagram: DiagramRecord) => {
     const store = useDiagramStore.getState();
     store.loadDiagram(diagram.nodes, diagram.edges);
     store.setDiagramName(diagram.title);
     store.setCurrentDiagramId(diagram.id);
     store.setIsCollaborator(false);
+
+    if (diagram.integrityWarning) {
+      toast({
+        title: t('integrity.warning'),
+        description: t('integrity.hashMismatch'),
+        variant: 'destructive',
+        duration: 10000,
+      });
+    }
+
     onOpenChange(false);
   };
 
@@ -244,36 +256,46 @@ export default function MyDiagramsModal({ open, onOpenChange }: MyDiagramsModalP
               {diagrams.length > 0 && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {diagrams.map((d) => (
-                    <div
-                      key={d.id}
-                      className="group flex cursor-pointer flex-col rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-                      onClick={() => handleLoad(d)}
-                    >
-                      <div className="mb-2">
-                        {editingId === d.id ? (
-                          <Input
-                            autoFocus
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleRename(d.id);
-                              if (e.key === 'Escape') setEditingId(null);
-                            }}
-                            onBlur={() => handleRename(d.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-7 text-sm"
-                          />
-                        ) : (
-                          <h3 className="font-semibold text-foreground break-words">{d.title}</h3>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t('myDiagrams.stats', { nodes: d.nodes.length, edges: d.edges.length })}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t('myDiagrams.updatedAt', { date: format(new Date(d.updated_at), 'dd/MM/yyyy HH:mm') })}
-                      </p>
-                      <TooltipProvider delayDuration={300}>
+                    <TooltipProvider key={d.id} delayDuration={300}>
+                      <div
+                        className="group flex cursor-pointer flex-col rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+                        onClick={() => handleLoad(d)}
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          {editingId === d.id ? (
+                            <Input
+                              autoFocus
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRename(d.id);
+                                if (e.key === 'Escape') setEditingId(null);
+                              }}
+                              onBlur={() => handleRename(d.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-7 text-sm"
+                            />
+                          ) : (
+                            <>
+                              <h3 className="font-semibold text-foreground break-words">{d.title}</h3>
+                              {/* PRD-v3 ITEM-2: Integrity warning icon */}
+                              {d.integrityWarning && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t('integrity.hashMismatch')}</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t('myDiagrams.stats', { nodes: d.nodes.length, edges: d.edges.length })}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t('myDiagrams.updatedAt', { date: format(new Date(d.updated_at), 'dd/MM/yyyy HH:mm') })}
+                        </p>
                         <div className="mt-2 flex justify-end gap-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -336,8 +358,8 @@ export default function MyDiagramsModal({ open, onOpenChange }: MyDiagramsModalP
                             <TooltipContent>{t('myDiagrams.delete')}</TooltipContent>
                           </Tooltip>
                         </div>
-                      </TooltipProvider>
-                    </div>
+                      </div>
+                    </TooltipProvider>
                   ))}
                 </div>
               )}
@@ -396,27 +418,30 @@ export default function MyDiagramsModal({ open, onOpenChange }: MyDiagramsModalP
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('myDiagrams.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>{t('myDiagrams.delete')}</AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('myDiagrams.delete')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {shareTarget && (
         <ShareDiagramModal
-          open={!!shareTarget}
-          onOpenChange={(o) => { if (!o) setShareTarget(null); }}
           diagramId={shareTarget.diagramId}
           ownerId={shareTarget.ownerId}
-          emailSharingEnabled={planLimits.emailSharingEnabled}
-          maxCollaborators={planLimits.maxCollaboratorsPerDiagram}
-          onUpgradeRequest={() => { setUpgradeFeature(t('shareDiagramModal.emailSharing')); setUpgradeDescription(null); setUpgradeModalOpen(true); }}
+          open={!!shareTarget}
+          onOpenChange={(o) => { if (!o) setShareTarget(null); }}
         />
       )}
 
       <UpgradeModal
         open={upgradeModalOpen}
         onOpenChange={setUpgradeModalOpen}
-        featureName={upgradeFeature || null}
+        featureName={upgradeFeature}
         description={upgradeDescription}
       />
     </>

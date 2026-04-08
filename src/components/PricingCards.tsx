@@ -1,3 +1,4 @@
+// PRD-v3 ITEM-1: Migrated inline styles to PricingCards.css classes
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Zap, Crown, Users, Loader2, Star } from 'lucide-react';
@@ -115,61 +116,36 @@ export default function PricingCards({
   const perNoteKey = (planId: string) =>
     planId === 'team' ? t('pricing.perEditorMonth') : planId === 'pro' ? t('pricing.perMonth') : null;
 
+  const getIconBoxClass = (plan: typeof PLANS[0]) => {
+    if (plan.highlight) return 'p-icon-box p-icon-box--blue';
+    if (plan.id === 'team') return 'p-icon-box p-icon-box--amber';
+    return 'p-icon-box p-icon-box--gray';
+  };
+
+  const getCardClass = (plan: typeof PLANS[0]) => {
+    const base = 'p-card p-card-base';
+    if (plan.highlight) return `${base} p-card--highlight`;
+    if (preselectedPlan === plan.id) return `${base} p-card--preselected`;
+    return `${base} p-card--default`;
+  };
+
   return (
-    <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="p-container">
       {/* ── Header ── */}
       {!hideHeader && (
-        <div style={{ textAlign: 'center', marginBottom: '48px', animation: 'fadeInUp 0.6s ease both' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(59,130,246,0.1)',
-              border: '1px solid rgba(59,130,246,0.25)',
-              borderRadius: '100px',
-              padding: '5px 14px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#93c5fd',
-              marginBottom: '24px',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
-            <Star style={{ width: '12px', height: '12px' }} />
+        <div className="p-header">
+          <div className="p-badge">
+            <Star className="p-icon-xs" />
             {t('pricing.badge', 'Planos e Preços')}
           </div>
-          <h2
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: 'clamp(28px, 4vw, 44px)',
-              fontWeight: 700,
-              lineHeight: 1.15,
-              margin: '0 0 16px',
-              color: '#f1f5f9',
-            }}
-          >
-            {t('pricing.title')}
-          </h2>
-          <p style={{ fontSize: '18px', color: '#94a3b8', maxWidth: '500px', margin: '0 auto', lineHeight: 1.6 }}>
-            {t('pricing.subtitle')}
-          </p>
+          <h2 className="p-title">{t('pricing.title')}</h2>
+          <p className="p-subtitle">{t('pricing.subtitle')}</p>
         </div>
       )}
 
       {/* ── Billing cycle toggle ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
-        <div
-          style={{
-            display: 'flex',
-            gap: '4px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '12px',
-            padding: '5px',
-          }}
-        >
+      <div className="p-toggle-wrap">
+        <div className="p-toggle-group">
           {CYCLE_KEYS.map((key) => (
             <button
               key={key}
@@ -183,14 +159,7 @@ export default function PricingCards({
       </div>
 
       {/* ── Plan cards ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px',
-          alignItems: 'stretch',
-        }}
-      >
+      <div className="p-grid">
         {PLANS.map((plan, idx) => {
           const Icon = plan.icon;
           const isLoading = loadingPlan === plan.id;
@@ -201,146 +170,47 @@ export default function PricingCards({
             <div
               key={plan.id}
               ref={(el) => { cardRefs.current[plan.id] = el; }}
-              className="p-card"
-              style={{
-                animationDelay: `${idx * 0.1}s`,
-                background: plan.highlight
-                  ? 'linear-gradient(145deg, rgba(59,130,246,0.08), rgba(139,92,246,0.05))'
-                  : preselectedPlan === plan.id
-                  ? 'rgba(245,158,11,0.05)'
-                  : 'rgba(255,255,255,0.03)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                border: plan.highlight
-                  ? '1px solid rgba(59,130,246,0.35)'
-                  : preselectedPlan === plan.id
-                  ? '1px solid rgba(245,158,11,0.5)'
-                  : '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '20px',
-                padding: '32px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: plan.highlight
-                  ? '0 0 0 1px rgba(59,130,246,0.2), 0 20px 60px rgba(59,130,246,0.12)'
-                  : preselectedPlan === plan.id
-                  ? '0 0 0 1px rgba(245,158,11,0.25), 0 16px 48px rgba(245,158,11,0.12)'
-                  : '0 4px 24px rgba(0,0,0,0.2)',
-              }}
+              className={getCardClass(plan)}
+              style={{ animationDelay: `${idx * 0.1}s` }}
             >
               {/* Highlight glow top-right */}
-              {plan.highlight && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '-40px',
-                    right: '-40px',
-                    width: '200px',
-                    height: '200px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
-                    pointerEvents: 'none',
-                  }}
-                />
-              )}
+              {plan.highlight && <div className="p-glow" />}
 
               {/* ── Plan header ── */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '10px',
-                      background: `rgba(${plan.highlight ? '59,130,246' : plan.id === 'team' ? '245,158,11' : '107,114,128'},0.15)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
+              <div className="p-plan-header">
+                <div className="p-plan-header-left">
+                  <div className={getIconBoxClass(plan)}>
                     {Icon
-                      ? <Icon style={{ width: '18px', height: '18px', color: plan.iconColor }} />
-                      : <Users style={{ width: '18px', height: '18px', color: plan.iconColor }} />
+                      ? <Icon className="p-icon-sm" style={{ color: plan.iconColor }} />
+                      : <Users className="p-icon-sm" style={{ color: plan.iconColor }} />
                     }
                   </div>
-                  <span
-                    style={{
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      fontWeight: 700,
-                      fontSize: '18px',
-                      color: '#f1f5f9',
-                    }}
-                  >
-                    {t(plan.nameKey)}
-                  </span>
+                  <span className="p-plan-name">{t(plan.nameKey)}</span>
                 </div>
                 {plan.highlight && (
-                  <span
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                      color: '#fff',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '3px 10px',
-                      borderRadius: '100px',
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {t('pricing.popular')}
-                  </span>
+                  <span className="p-popular-badge">{t('pricing.popular')}</span>
                 )}
               </div>
 
               {/* ── Price ── */}
-              <div style={{ marginBottom: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <span
-                    style={{
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: '44px',
-                      fontWeight: 800,
-                      color: plan.highlight ? '#93c5fd' : '#f1f5f9',
-                      lineHeight: 1,
-                    }}
-                  >
+              <div className="p-price-section">
+                <div className="p-price-row">
+                  <span className={`p-price-value ${plan.highlight ? 'p-price-value--highlight' : ''}`}>
                     {price}
                   </span>
                 </div>
-                {perNote && (
-                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>{perNote}</p>
-                )}
+                {perNote && <p className="p-per-note">{perNote}</p>}
               </div>
 
               {/* ── Divider ── */}
-              <div
-                style={{
-                  height: '1px',
-                  background: 'rgba(255,255,255,0.07)',
-                  marginBottom: '24px',
-                }}
-              />
+              <div className="p-divider" />
 
               {/* ── Features ── */}
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+              <ul className="p-feature-list">
                 {plan.features.map((key) => (
                   <li key={key} className="p-feature-item">
-                    <div
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        background: 'rgba(34,197,94,0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        marginTop: '1px',
-                      }}
-                    >
-                      <Check style={{ width: '10px', height: '10px', color: '#4ade80' }} />
+                    <div className="p-check-circle">
+                      <Check className="p-icon-check" />
                     </div>
                     {t(key)}
                   </li>
@@ -359,7 +229,7 @@ export default function PricingCards({
                 onClick={() => onSelectPlan(plan.id, cycle)}
                 disabled={!!loadingPlan}
               >
-                {isLoading && <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />}
+                {isLoading && <Loader2 className="p-icon-loader" />}
                 {buttonTextOverrides[plan.id] || t(plan.cta)}
               </button>
             </div>
