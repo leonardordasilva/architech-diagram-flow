@@ -157,7 +157,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
   const { handleAddNode } = useAddNodeToCanvas(reactFlowWrapper);
 
   const { guides, onNodeDrag, onNodeDragStop } = useSnapGuides(nodes);
-  const { broadcastChanges, collaborators } = useRealtimeCollab(shareToken || null, planLimits.realtimeCollabEnabled);
+  const { broadcastChanges, collaborators } = useRealtimeCollab(shareToken || null, planLimits.realtimeCollabEnabled, user);
   const { saveStatus } = useAutoSave();
   const { handleExportPNG, handleExportSVG, handleExportMermaid, handleExportJSON } = useExportHandlers(darkMode, planLimits.watermarkEnabled);
 
