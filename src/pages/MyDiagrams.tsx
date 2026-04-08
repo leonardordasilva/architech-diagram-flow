@@ -441,7 +441,7 @@ export default function MyDiagramsModal({ open, onOpenChange }: MyDiagramsModalP
       <UpgradeModal
         open={upgradeModalOpen}
         onOpenChange={setUpgradeModalOpen}
-        feature={upgradeFeature}
+        featureName={upgradeFeature}
         description={upgradeDescription}
       />
     </>
