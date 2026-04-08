@@ -69,6 +69,7 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
       if (isCollaborator && diagramId) {
         await saveSharedDiagram(diagramId, nodes, edges);
         clearAutoSave();
+        useDiagramStore.getState().setIsDirty(false);
         toast({ title: t('save.sharedSaved') });
       } else {
         const isSharedContext = !!shareToken && !diagramId;
@@ -77,6 +78,7 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
         const record = await saveDiagram(diagramName, nodes, edges, user.id, diagramId, workspaceId);
         setDiagramId(record.id);
         clearAutoSave();
+        useDiagramStore.getState().setIsDirty(false);
         if (isNewDiagram) {
           queryClient.invalidateQueries({ queryKey: ['diagrams', user.id] });
         }

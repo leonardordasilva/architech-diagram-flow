@@ -46,12 +46,24 @@ async function toDiagramRecord(row: DiagramRow): Promise<DiagramRecord> {
     throw new Error('Dados do diagrama corrompidos no banco de dados. ID: ' + row.id);
   }
 
+  // T10: Verify content_hash integrity when available
+  if (row.content_hash) {
+    try {
+      const recomputedHash = await computeContentHash(
+        nodesParsed.data as unknown[],
+        edgesParsed.data as unknown[],
+      );
+      if (recomputedHash !== row.content_hash) {
+        console.warn(`[diagramService] content_hash mismatch for diagram ${row.id}. Expected: ${row.content_hash}, Got: ${recomputedHash}`);
+      }
+    } catch (hashErr) {
+      console.warn(`[diagramService] Failed to verify content_hash for diagram ${row.id}:`, hashErr);
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
-    // Cast necessário: PersistedNode (Zod-inferred) não é structurally assignable a DiagramNode
-    // (Node<DiagramNodeData> do @xyflow/react), pois o React Flow adiciona campos internos
-    // ausentes no schema Zod. Os dados foram validados pelo Zod acima; o cast é seguro.
     nodes: nodesParsed.data as DiagramNode[],
     edges: edgesParsed.data as DiagramEdge[],
     owner_id: row.owner_id,
@@ -69,7 +81,41 @@ export async function saveDiagram(
   existingId?: string,
   workspaceId?: string | null,
 ): Promise<DiagramRecord> {
-  // Encrypt nodes/edges before persisting
+  // T7: Try atomic save via edge function first, fallback to client-side flow
+  try {
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('save-diagram', {
+      body: {
+        title,
+        nodes: JSON.parse(JSON.stringify(nodes)),
+        edges: JSON.parse(JSON.stringify(edges)),
+        diagram_id: existingId,
+        workspace_id: workspaceId,
+      },
+    });
+
+    if (fnError) throw fnError;
+    if (fnData?.error === 'DIAGRAM_LIMIT_EXCEEDED') {
+      throw new Error('DIAGRAM_LIMIT_EXCEEDED');
+    }
+    if (fnData?.error) throw new Error(fnData.error);
+
+    return {
+      id: fnData.id,
+      title: fnData.title,
+      nodes,
+      edges,
+      owner_id: fnData.owner_id,
+      share_token: fnData.share_token,
+      created_at: fnData.created_at,
+      updated_at: fnData.updated_at,
+    };
+  } catch (edgeFnErr: any) {
+    // Re-throw limit error
+    if (edgeFnErr?.message === 'DIAGRAM_LIMIT_EXCEEDED') throw edgeFnErr;
+    console.warn('[diagramService] Edge function save failed, falling back to client-side:', edgeFnErr?.message);
+  }
+
+  // ── Fallback: client-side encrypt + save ──
   const encrypted = await encryptDiagramData(
     JSON.parse(JSON.stringify(nodes)),
     JSON.parse(JSON.stringify(edges)),
@@ -94,7 +140,6 @@ export async function saveDiagram(
       .select('id, title, owner_id, share_token, created_at, updated_at')
       .single();
     if (error) throw error;
-    // Return the record with the original (unencrypted) nodes/edges to avoid a costly decrypt round-trip
     return {
       id: data.id,
       title: data.title,
@@ -124,7 +169,6 @@ export async function saveDiagram(
     .select('id, title, owner_id, share_token, created_at, updated_at')
     .single();
   if (error) throw error;
-  // Return with original unencrypted data
   return {
     id: data.id,
     title: data.title,

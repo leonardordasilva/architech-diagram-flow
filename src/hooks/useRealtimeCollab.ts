@@ -37,7 +37,7 @@ const AVATAR_COLORS = [
   'hsl(0, 72%, 51%)',
 ];
 
-export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabled = true) {
+export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabled = true, user?: { id: string; email?: string } | null) {
   const diagramId = useDiagramStore((s) => s.currentDiagramId);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const dbChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -132,11 +132,12 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          const { data } = await supabase.auth.getUser();
-          if (data?.user) {
+          // T8: Use user prop instead of fetching from auth API
+          const trackUser = user ?? (await supabase.auth.getUser()).data?.user;
+          if (trackUser) {
             await channel.track({
-              userId: data.user.id,
-              email: data.user.email || '',
+              userId: trackUser.id,
+              email: trackUser.email || '',
               online_at: new Date().toISOString(),
             });
           }
@@ -150,7 +151,7 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [shareToken, realtimeCollabEnabled]);
+  }, [shareToken, realtimeCollabEnabled, user]);
 
   // PERF-03: Track last known updated_at to avoid unnecessary state updates
   const lastUpdatedAtRef = useRef<string>('');

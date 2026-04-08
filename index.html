@@ -7,7 +7,7 @@
   <!-- CSP: R11 — removed unsafe-eval from script-src; nonce injected by Vite at build time -->
   <!-- CSP hardening: restrict sources while allowing Vite/React inline needs -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob: https://storage.googleapis.com https://*.supabase.co; worker-src 'self' blob:;" />
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob: https://storage.googleapis.com https://*.supabase.co; worker-src 'self' blob:; frame-ancestors 'self';" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <title>MicroFlow Architect — Diagramas de Microsserviços</title>
   <meta name="description"

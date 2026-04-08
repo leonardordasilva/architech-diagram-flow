@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useDiagramStore } from '@/store/diagramStore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -39,6 +40,7 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
   const [resetLoading, setResetLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
 
   // Fetch current avatar on open
   useEffect(() => {
@@ -54,6 +56,19 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
   }, [open, user]);
 
   const handleSignOut = async () => {
+    // T5: Check for unsaved changes before signing out
+    const isDirty = useDiagramStore.getState().isDirty;
+    if (isDirty) {
+      setShowUnsavedConfirm(true);
+      return;
+    }
+    onOpenChange(false);
+    await signOut();
+    navigate('/');
+  };
+
+  const handleForceSignOut = async () => {
+    setShowUnsavedConfirm(false);
     onOpenChange(false);
     await signOut();
     navigate('/');
@@ -275,6 +290,25 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
           </div>
         </div>
 
+        {/* Unsaved changes confirmation */}
+        <AlertDialog open={showUnsavedConfirm} onOpenChange={setShowUnsavedConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('account.unsavedChangesTitle', 'Alterações não salvas')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('account.unsavedChangesDesc', 'Você tem alterações não salvas no diagrama atual. Deseja sair sem salvar?')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel', 'Cancelar')}</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleForceSignOut}
+              >
+                {t('account.signOutAnyway', 'Sair sem salvar')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Delete account confirmation */}
         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
           <AlertDialogContent>
@@ -299,7 +333,7 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
                     toast({ title: t('account.deleteAccountSuccess') });
                     onOpenChange(false);
                     await supabase.auth.signOut();
-                    window.location.href = '/';
+                    navigate('/');
                   } catch (err: any) {
                     toast({ title: t('account.deleteAccountError'), description: err.message, variant: 'destructive' });
                   } finally {
