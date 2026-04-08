@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getKeyBytes, importKey, encrypt, computeContentHash } from '../_shared/crypto.ts';
 
 const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "")
   .split(",").map((o) => o.trim()).filter(Boolean);
@@ -17,64 +18,6 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-// ─── Crypto helpers ─────────────────────────────────────────
-function uint8ToBase64(buf: Uint8Array): string {
-  const CHUNK = 8192;
-  let binary = "";
-  for (let i = 0; i < buf.length; i += CHUNK) {
-    const slice = buf.subarray(i, i + CHUNK);
-    for (let j = 0; j < slice.length; j++) {
-      binary += String.fromCharCode(slice[j]);
-    }
-  }
-  return btoa(binary);
-}
-
-function getKeyBytes(): Uint8Array {
-  const raw = Deno.env.get("DIAGRAM_ENCRYPTION_KEY");
-  if (!raw) throw new Error("DIAGRAM_ENCRYPTION_KEY not configured");
-  const decoded = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
-  if (decoded.length !== 32) throw new Error("DIAGRAM_ENCRYPTION_KEY must be 32 bytes");
-  return decoded;
-}
-
-async function importKey(keyBytes: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", keyBytes.buffer as ArrayBuffer, "AES-GCM", false, ["encrypt"]);
-}
-
-async function encrypt(plainJson: unknown, key: CryptoKey): Promise<{ iv: string; ciphertext: string }> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(JSON.stringify(plainJson));
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-  return { iv: uint8ToBase64(iv), ciphertext: uint8ToBase64(new Uint8Array(encrypted)) };
-}
-
-async function computeContentHash(nodes: unknown[], edges: unknown[]): Promise<string> {
-  const payload = JSON.stringify({ nodes, edges });
-  const encoded = new TextEncoder().encode(payload);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// ─── Rate Limiter ───────────────────────────────────────────
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 60;
-const RATE_WINDOW_MS = 60_000;
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
-// ─── Handler ────────────────────────────────────────────────
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -104,7 +47,19 @@ serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    if (!checkRateLimit(userId)) {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+
+    // F2-T2: Rate limit via persistent DB RPC
+    const rateLimitKey = `edge:save:${userId}`;
+    const { data: allowed, error: rlError } = await supabaseAdmin.rpc('check_rate_limit', {
+      p_key: rateLimitKey,
+      p_limit: 60,
+      p_window_seconds: 60,
+    });
+    if (rlError || allowed === false) {
       return new Response(JSON.stringify({ error: "Too many requests" }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -120,8 +75,13 @@ serve(async (req) => {
       workspace_id?: string | null;
     };
 
-    if (!title || !Array.isArray(nodes) || !Array.isArray(edges)) {
-      return new Response(JSON.stringify({ error: "title, nodes, edges required" }), {
+    if (!title && !diagram_id) {
+      return new Response(JSON.stringify({ error: "title or diagram_id required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(nodes) || !Array.isArray(edges)) {
+      return new Response(JSON.stringify({ error: "nodes and edges must be arrays" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -134,11 +94,6 @@ serve(async (req) => {
       encrypt(edges, key),
       computeContentHash(nodes, edges),
     ]);
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
 
     if (diagram_id) {
       // UPDATE — verify ownership or collaboration
@@ -179,7 +134,7 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       };
       // Only owner can change title
-      if (isOwner) updatePayload.title = title;
+      if (isOwner && title) updatePayload.title = title;
 
       const { data, error } = await supabaseAdmin
         .from("diagrams")

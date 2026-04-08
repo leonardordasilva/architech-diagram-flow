@@ -1533,3 +1533,25 @@ CREATE POLICY "Feature flags are publicly readable"
 -- Insert example flag
 INSERT INTO public.feature_flags (key, enabled, description)
   VALUES ('atomic_save', true, 'Use server-side atomic save via edge function');
+
+-- ── migration: 20260408_share_token_expires_at.sql ──
+-- PRD-0026 F4-T2: Share token expiration
+
+ALTER TABLE public.diagrams
+  ADD COLUMN IF NOT EXISTS share_token_expires_at timestamptz;
+
+COMMENT ON COLUMN public.diagrams.share_token_expires_at IS
+  'When set, the share_token expires at this timestamp. NULL means no expiration (backward-compat).';
+
+CREATE OR REPLACE FUNCTION public.get_diagram_by_share_token(token text)
+ RETURNS SETOF diagrams
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $$
+  SELECT * FROM diagrams
+  WHERE share_token = token
+    AND is_shared = true
+    AND (share_token_expires_at IS NULL OR share_token_expires_at > now())
+  LIMIT 1;
+$$;

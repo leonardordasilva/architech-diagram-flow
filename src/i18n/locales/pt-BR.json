@@ -588,5 +588,16 @@
     "removeMember": "Remover",
     "roleBadge": "{{role}} no workspace",
     "contextWorkspace": "Workspace: {{name}}"
+  },
+  "unsavedDialog": {
+    "title": "Alterações não salvas",
+    "description": "Você tem alterações que não foram salvas. Deseja salvar antes de sair?",
+    "saveAndLeave": "Salvar e Sair",
+    "leaveWithout": "Sair sem Salvar",
+    "cancel": "Cancelar"
+  },
+  "integrity": {
+    "warning": "Aviso de integridade",
+    "hashMismatch": "O hash de integridade deste diagrama não confere. Os dados podem ter sido alterados fora do fluxo normal."
   }
 }
