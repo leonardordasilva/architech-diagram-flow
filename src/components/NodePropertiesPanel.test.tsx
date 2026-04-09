@@ -20,32 +20,35 @@ import NodePropertiesPanel from '@/components/NodePropertiesPanel';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const serviceNode = {
+import type { DiagramNode, NodeType, ExternalCategory } from '@/types/diagram';
+import type { InternalDatabase } from '@/types/diagram';
+
+const serviceNode: DiagramNode = {
   id: 'n1',
   type: 'service',
   position: { x: 0, y: 0 },
   data: {
     label: 'My Service',
-    type: 'service',
+    type: 'service' as NodeType,
     internalDatabases: [],
     internalServices: [],
   },
 };
 
-const serviceNodeWithDbs = {
+const serviceNodeWithDbs: DiagramNode = {
   ...serviceNode,
   data: {
     ...serviceNode.data,
-    internalDatabases: [{ label: 'Main DB', dbType: 'Oracle' }],
+    internalDatabases: [{ label: 'Main DB', dbType: 'Oracle' }] as InternalDatabase[],
     internalServices: ['Redis'],
   },
 };
 
-const externalNode = {
+const externalNode: DiagramNode = {
   id: 'n2',
   type: 'external',
   position: { x: 0, y: 0 },
-  data: { label: 'Stripe', type: 'external', externalCategory: 'Payment' },
+  data: { label: 'Stripe', type: 'external' as NodeType, externalCategory: 'Payment' as ExternalCategory },
 };
 
 function renderPanel(nodeId: string | null = 'n1', onClose = vi.fn()) {
@@ -173,7 +176,7 @@ describe('NodePropertiesPanel — nó tipo service: bancos de dados internos', (
     fireEvent.change(dbInput, { target: { value: 'Primary DB' } });
     fireEvent.blur(dbInput);
     const dbs = useDiagramStore.getState().nodes[0].data.internalDatabases;
-    expect(dbs[0].label).toBe('Primary DB');
+    expect(dbs![0] as InternalDatabase).toHaveProperty('label', 'Primary DB');
   });
 });
 
@@ -208,7 +211,7 @@ describe('NodePropertiesPanel — nó tipo service: bibliotecas/serviços intern
     fireEvent.change(svcInput, { target: { value: 'Kafka' } });
     fireEvent.blur(svcInput);
     const svcs = useDiagramStore.getState().nodes[0].data.internalServices;
-    expect(svcs[0]).toBe('Kafka');
+    expect(svcs![0]).toBe('Kafka');
   });
 });
 

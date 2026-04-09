@@ -1,5 +1,6 @@
 import { useEffect, useState, createContext, useContext } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
@@ -26,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      // PRD-0035 T4: identify user in Sentry (UUID only, no PII)
+      Sentry.setUser(session?.user ? { id: session.user.id } : null);
     });
 
     // R13 fix: restore persisted session instead of destroying it
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    Sentry.setUser(null);
     // INTENTIONAL: Full page reload (not React Router navigate) to ensure
     // all Zustand stores, React Query caches, IndexedDB autosave state,
     // and Supabase realtime channels are fully destroyed.

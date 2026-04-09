@@ -56,7 +56,7 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
       .then(({ data }) => {
         if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       })
-      .catch((err) => {
+      .then(undefined, (err: unknown) => {
         console.warn('[AccountModal] Failed to load avatar:', err);
       });
   }, [open, user]);

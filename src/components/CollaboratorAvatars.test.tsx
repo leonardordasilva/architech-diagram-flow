@@ -26,8 +26,6 @@ const makeCollaborator = (n: number): Collaborator => ({
   userId: `user-${n}`,
   email: `user${n}@test.com`,
   color: '#ff0000',
-  cursorX: 0,
-  cursorY: 0,
 });
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -50,13 +48,13 @@ describe('CollaboratorAvatars — renderização', () => {
   });
 
   it('usa fallback "?" para colaborador sem e-mail', () => {
-    const collab: Collaborator = { userId: 'u1', email: '', color: '#aaa', cursorX: 0, cursorY: 0 };
+    const collab: Collaborator = { userId: 'u1', email: '', color: '#aaa' };
     render(React.createElement(CollaboratorAvatars, { collaborators: [collab] }));
     expect(screen.getByText('?')).toBeInTheDocument();
   });
 
   it('exibe rótulo anônimo para colaborador sem e-mail no tooltip', () => {
-    const collab: Collaborator = { userId: 'u1', email: '', color: '#aaa', cursorX: 0, cursorY: 0 };
+    const collab: Collaborator = { userId: 'u1', email: '', color: '#aaa' };
     render(React.createElement(CollaboratorAvatars, { collaborators: [collab] }));
     expect(screen.getByText('collaborators.anonymous')).toBeInTheDocument();
   });
