@@ -218,9 +218,19 @@ export default function BillingModal({
               </p>
             )}
             {renewalDate && (
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-1">
                 {t('billing.renewsOn')}: <span className="font-medium">{renewalDate}</span>
               </p>
+            )}
+
+            {subscription?.cancel_at_period_end && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400 mb-4">
+                {t('billing.cancelScheduled', {
+                  date: subscription.current_period_end
+                    ? new Date(subscription.current_period_end).toLocaleDateString()
+                    : '—'
+                })}
+              </div>
             )}
 
             <div className="flex gap-3 flex-wrap">

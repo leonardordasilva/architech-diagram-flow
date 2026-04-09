@@ -449,6 +449,7 @@
     "checkoutProcessing": "Processando seu pagamento…",
     "checkoutProcessingDesc": "Aguarde enquanto confirmamos sua assinatura. Isso pode levar alguns segundos.",
     "subscriptionError": "Não foi possível carregar os detalhes da assinatura.",
+    "cancelScheduled": "Sua assinatura está cancelada e expirará em {{date}}. Você manterá acesso até essa data.",
     "status": {
       "active": "Ativo",
       "past_due": "Em atraso",
