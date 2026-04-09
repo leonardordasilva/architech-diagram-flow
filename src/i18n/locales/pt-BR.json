@@ -9,7 +9,9 @@
     "tryAgain": "Tentar novamente",
     "close": "Fechar",
     "waiting": "Aguarde...",
-    "back": "Voltar"
+    "back": "Voltar",
+    "goBack": "← Voltar",
+    "loadingSlowNetwork": "Carregando... Isso está demorando mais que o esperado."
   },
   "errors": {
     "unexpected": "Erro inesperado",
@@ -19,7 +21,9 @@
     "somethingWrong": "Algo deu errado.",
     "diagramRender": "Erro ao renderizar o diagrama",
     "diagramRenderDesc": "Ocorreu um erro inesperado. Seus dados foram preservados no auto-save local.",
-    "reload": "Recarregar página"
+    "reload": "Recarregar página",
+    "newVersionAvailable": "Uma nova versão do app está disponível.",
+    "errorId": "ID do erro:"
   },
   "auth": {
     "login": "Entrar",
@@ -347,7 +351,9 @@
   },
   "notFound": {
     "title": "Página não encontrada",
-    "home": "Voltar ao início"
+    "subtitle": "A página que você procura não existe ou foi movida.",
+    "home": "Voltar ao início",
+    "goToApp": "Ir para o app"
   },
   "connectionError": {
     "message": "{{source}} não pode se conectar a {{target}}"
