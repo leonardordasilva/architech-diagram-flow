@@ -86,7 +86,11 @@ export function useAdminMutations() {
   const updatePlan = useMutation({
     mutationFn: (vars: { userId: string; plan: string }) =>
       adminInvoke('admin-update-plan', vars),
-    onSuccess: invalidateAll,
+    onSuccess: (_data, vars) => {
+      invalidateAll();
+      // Also invalidate the user-facing plan-limits cache so the change reflects immediately
+      qc.invalidateQueries({ queryKey: ['plan-limits', vars.userId] });
+    },
   });
 
   const suspendUser = useMutation({

@@ -30,8 +30,9 @@ export function usePlanLimits() {
     queryKey: ['plan-limits', user?.id],
     queryFn: () => fetchPlanLimits(user!.id),
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds — ensures plan changes reflect quickly
     gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
