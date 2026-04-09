@@ -259,4 +259,12 @@ export function clearAutoSave() {
   clearIDB().catch(() => {});
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(LEGACY_STORAGE_KEY);
+  // PRD-0028 F3-T3: Close cached IDB connection
+  if (cachedDb) {
+    cachedDb.close();
+    cachedDb = null;
+  }
+}
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
 }
