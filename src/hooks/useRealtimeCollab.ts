@@ -155,7 +155,8 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
     };
   }, [shareToken, realtimeCollabEnabled, user]);
 
-  // PERF-03: Track last known updated_at to avoid unnecessary state updates
+  // Track last known revision and updated_at for deduplication
+  const lastRevisionRef = useRef<number>(-1);
   const lastUpdatedAtRef = useRef<string>('');
 
   // Postgres Realtime channel: listen for DB-level updates on the current diagram
@@ -177,12 +178,21 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
 
           const newRecord = payload.new as DiagramUpdatePayload;
 
-          // PERF-03: Compare updated_at first to avoid expensive JSON operations
-          const remoteUpdatedAt = newRecord.updated_at;
-          if (remoteUpdatedAt && remoteUpdatedAt === lastUpdatedAtRef.current) {
-            return;
+          // Use revision_number as primary dedup criterion (monotonically increasing)
+          const remoteRevision = newRecord.revision_number ?? -1;
+          if (remoteRevision > 0 && remoteRevision <= lastRevisionRef.current) {
+            return; // already have this or newer version
           }
-          lastUpdatedAtRef.current = remoteUpdatedAt || '';
+          if (remoteRevision > 0) {
+            lastRevisionRef.current = remoteRevision;
+          } else {
+            // Fallback for diagrams created before revision_number migration
+            const remoteUpdatedAt = newRecord.updated_at;
+            if (remoteUpdatedAt && remoteUpdatedAt === lastUpdatedAtRef.current) {
+              return;
+            }
+            lastUpdatedAtRef.current = remoteUpdatedAt || '';
+          }
 
           let remoteNodes = newRecord.nodes;
           let remoteEdges = newRecord.edges;
