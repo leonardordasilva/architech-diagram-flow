@@ -11,7 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Mail, KeyRound, LogOut, Camera, Loader2, X, Languages, Trash2 } from 'lucide-react';
+import { Mail, KeyRound, LogOut, Camera, Loader2, X, Languages, Trash2, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
@@ -258,6 +258,18 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
               >
                 <KeyRound className="h-4 w-4" />
                 {t('account.resetPassword')}
+              </Button>
+            )}
+
+            {/* Admin access — only visible for admin email */}
+            {user?.email?.trim().toLowerCase() === import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase() && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => { onOpenChange(false); navigate('/admin'); }}
+              >
+                <Shield className="h-4 w-4" />
+                {t('account.adminArea', 'Área Administrativa')}
               </Button>
             )}
 
