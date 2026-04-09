@@ -5,10 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDiagramStore } from '@/store/diagramStore';
 import { clearAutoSave } from '@/hooks/useAutoSave';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import logoIcon from '../img/MicroFlow_Icon_Low.avif';
 
-type AuthView = 'login' | 'signup' | 'forgot';
+type AuthView = 'login' | 'signup' | 'forgot' | 'confirm-email';
 
 export default function AuthPage() {
   const { t } = useTranslation();
@@ -53,11 +53,8 @@ export default function AuthPage() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        toast({ title: t('auth.signupSuccessMsg') });
-        if (redirectTo) {
-          navigate(redirectTo, { replace: true });
-          return;
-        }
+        setView('confirm-email');
+        return;
       }
     } catch (err: any) {
       const msgMap: Record<string, string> = {
@@ -81,7 +78,9 @@ export default function AuthPage() {
       ? t('auth.loginTitle')
       : view === 'signup'
         ? t('auth.signupTitle')
-        : t('auth.recoverTitle');
+        : view === 'confirm-email'
+          ? t('auth.signupConfirmTitle')
+          : t('auth.recoverTitle');
 
   const submitLabel = loading
     ? t('auth.waiting')
