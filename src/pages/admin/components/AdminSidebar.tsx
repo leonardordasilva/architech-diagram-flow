@@ -5,11 +5,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const sections = [
+interface NavItem {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  end?: boolean;
+}
+
+const sections: { label: string; items: NavItem[] }[] = [
   {
     label: 'Overview',
     items: [
-      { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true as const },
+      { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
     ],
   },
   {
