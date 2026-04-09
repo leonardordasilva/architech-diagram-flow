@@ -265,6 +265,3 @@ export function clearAutoSave() {
     cachedDb = null;
   }
 }
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(LEGACY_STORAGE_KEY);
-}
