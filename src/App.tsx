@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import './i18n';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,8 +7,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { SuspenseWithTimeout } from "@/components/SuspenseWithTimeout";
 import Index from "./pages/Index";
 
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -46,27 +47,63 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Suspense fallback={<LoadingSpinner />}>
+            <SuspenseWithTimeout>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/app" element={<Index />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/diagram/:shareToken" element={<SharedDiagram />} />
-                <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-                <Route path="/workspace" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
-                <Route path="/workspace/diagrams" element={<ProtectedRoute><WorkspaceDiagrams /></ProtectedRoute>} />
-                <Route path="/invite" element={<AcceptInvite />} />
+                <Route path="/app" element={
+                  <RouteErrorBoundary routeName="canvas">
+                    <Index />
+                  </RouteErrorBoundary>
+                } />
+                <Route path="/reset-password" element={
+                  <RouteErrorBoundary routeName="reset-password">
+                    <ResetPassword />
+                  </RouteErrorBoundary>
+                } />
+                <Route path="/diagram/:shareToken" element={
+                  <RouteErrorBoundary routeName="shared-diagram">
+                    <SharedDiagram />
+                  </RouteErrorBoundary>
+                } />
+                <Route path="/billing" element={
+                  <ProtectedRoute>
+                    <RouteErrorBoundary routeName="billing">
+                      <Billing />
+                    </RouteErrorBoundary>
+                  </ProtectedRoute>
+                } />
+                <Route path="/workspace" element={
+                  <ProtectedRoute>
+                    <RouteErrorBoundary routeName="workspace">
+                      <Workspace />
+                    </RouteErrorBoundary>
+                  </ProtectedRoute>
+                } />
+                <Route path="/workspace/diagrams" element={
+                  <ProtectedRoute>
+                    <RouteErrorBoundary routeName="workspace-diagrams">
+                      <WorkspaceDiagrams />
+                    </RouteErrorBoundary>
+                  </ProtectedRoute>
+                } />
+                <Route path="/invite" element={
+                  <RouteErrorBoundary routeName="accept-invite">
+                    <AcceptInvite />
+                  </RouteErrorBoundary>
+                } />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/admin/*" element={
                   <AdminGuard>
-                    <AdminApp />
+                    <RouteErrorBoundary routeName="admin">
+                      <AdminApp />
+                    </RouteErrorBoundary>
                   </AdminGuard>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </Suspense>
+            </SuspenseWithTimeout>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
@@ -75,4 +112,3 @@ const App = () => (
 );
 
 export default App;
-

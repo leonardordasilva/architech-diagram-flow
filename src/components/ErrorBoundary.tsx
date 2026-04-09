@@ -9,11 +9,13 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  isChunkError?: boolean;
 }
 
 /**
  * R6 — Global React ErrorBoundary.
  * PRD-0035 T2: reports errors to Sentry.
+ * PRD-0039 T4: auto-reloads on ChunkLoadError (once per session).
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -26,10 +28,25 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    const isChunkError = error.name === 'ChunkLoadError'
+      || error.message.includes('Loading chunk')
+      || error.message.includes('Failed to fetch dynamically imported module');
+
+    if (isChunkError) {
+      const alreadyReloaded = sessionStorage.getItem('__chunk_reload__');
+      if (!alreadyReloaded) {
+        sessionStorage.setItem('__chunk_reload__', '1');
+        window.location.reload();
+        return;
+      }
+      sessionStorage.removeItem('__chunk_reload__');
+      this.setState({ isChunkError: true });
+    }
+
     console.error('[ErrorBoundary]', error, info.componentStack);
     Sentry.captureException(error, {
       extra: { componentStack: info.componentStack },
-      tags: { source: 'ErrorBoundary' },
+      tags: { source: 'ErrorBoundary', isChunkError: String(isChunkError) },
     });
     toast({
       title: i18n.t('errors.unexpected'),
@@ -46,14 +63,28 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="text-xl font-semibold text-foreground">
               {i18n.t('errors.somethingWrong')}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {i18n.t('errors.unexpectedDesc')}
-            </p>
+            {this.state.isChunkError ? (
+              <p className="text-sm text-muted-foreground">
+                {i18n.t('errors.newVersionAvailable', 'A new version of the app is available.')}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {i18n.t('errors.unexpectedDesc')}
+              </p>
+            )}
             <button
               className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              onClick={() => this.setState({ hasError: false })}
+              onClick={() => {
+                if (this.state.isChunkError) {
+                  window.location.reload();
+                } else {
+                  this.setState({ hasError: false, isChunkError: false });
+                }
+              }}
             >
-              {i18n.t('common.tryAgain')}
+              {this.state.isChunkError
+                ? i18n.t('errors.reload')
+                : i18n.t('common.tryAgain')}
             </button>
           </div>
         </div>
