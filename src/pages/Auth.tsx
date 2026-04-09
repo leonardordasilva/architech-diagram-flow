@@ -308,6 +308,7 @@ export default function AuthPage() {
               </button>
             </div>
           ) : (
+          <> 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Email */}
             <div>
