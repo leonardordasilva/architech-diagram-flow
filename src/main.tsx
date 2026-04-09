@@ -24,7 +24,7 @@ Sentry.init({
     'ResizeObserver loop completed with undelivered notifications',
     'Network request failed',
     'Load failed',
-    'ChunkLoadError',
+    
   ],
   // T4 — PII filtering
   beforeSend(event) {

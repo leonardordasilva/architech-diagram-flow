@@ -5,6 +5,7 @@ export interface BrevoEmailPayload {
   html: string;
   text?: string;
   messageId?: string;
+  replyTo?: string;
 }
 
 export interface BrevoSendResult {
@@ -19,13 +20,14 @@ export async function sendBrevoEmail(
   payload: BrevoEmailPayload,
   apiKey: string,
 ): Promise<BrevoSendResult> {
-  const fromMatch = payload.from.match(/^(.*?)\s*<(.+)>$/) ?? [null, payload.from, payload.from];
-  const senderName = fromMatch[1]?.trim() || 'MicroFlow';
-  const senderEmail = fromMatch[2]?.trim() || payload.from;
+  const fromMatch = payload.from.match(/^(.*?)\s*<(.+)>$/);
+  const senderName = fromMatch?.[1]?.trim() || 'MicroFlow';
+  const senderEmail = fromMatch?.[2]?.trim() || payload.from;
 
   const body = {
     sender: { name: senderName, email: senderEmail },
     to: [{ email: payload.to }],
+    replyTo: { email: payload.replyTo ?? 'suporte@microflow.dev' },
     subject: payload.subject,
     htmlContent: payload.html,
     ...(payload.text ? { textContent: payload.text } : {}),
