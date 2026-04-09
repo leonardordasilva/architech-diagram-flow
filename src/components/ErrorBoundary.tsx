@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 import i18n from '@/i18n';
 import { toast } from '@/hooks/use-toast';
 
@@ -12,12 +13,7 @@ interface State {
 
 /**
  * R6 — Global React ErrorBoundary.
- *
- * Catches unhandled render-phase errors, shows a toast to the user,
- * and logs the error + component stack to the console.
- *
- * Unhandled promise rejections are caught with
- * `window.onunhandledrejection` at module scope below.
+ * PRD-0035 T2: reports errors to Sentry.
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -31,6 +27,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+    Sentry.captureException(error, {
+      extra: { componentStack: info.componentStack },
+      tags: { source: 'ErrorBoundary' },
+    });
     toast({
       title: i18n.t('errors.unexpected'),
       description: i18n.t('errors.unexpectedDesc'),
@@ -41,22 +41,21 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 32, textAlign: 'center' }}>
-          <h2>{i18n.t('errors.somethingWrong')}</h2>
-          <button
-            style={{
-              marginTop: 16,
-              padding: '8px 24px',
-              borderRadius: 8,
-              background: '#3b82f6',
-              color: '#fff',
-              cursor: 'pointer',
-              border: 'none',
-            }}
-            onClick={() => this.setState({ hasError: false })}
-          >
-            {i18n.t('common.tryAgain')}
-          </button>
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="text-center space-y-4 p-8 max-w-md">
+            <h2 className="text-xl font-semibold text-foreground">
+              {i18n.t('errors.somethingWrong')}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {i18n.t('errors.unexpectedDesc')}
+            </p>
+            <button
+              className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              onClick={() => this.setState({ hasError: false })}
+            >
+              {i18n.t('common.tryAgain')}
+            </button>
+          </div>
         </div>
       );
     }
@@ -65,10 +64,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-/* R6-b: Catch unhandled promise rejections globally */
+/* R6-b / PRD-0035 T3: Catch unhandled promise rejections globally */
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[UnhandledRejection]', event.reason);
+    Sentry.captureException(
+      event.reason instanceof Error
+        ? event.reason
+        : new Error(String(event.reason)),
+      { tags: { source: 'unhandledRejection' } },
+    );
     toast({
       title: i18n.t('errors.networkOp'),
       description:

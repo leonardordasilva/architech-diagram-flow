@@ -69,7 +69,7 @@ export default function SpawnFromNodeModal({
     if (type === 'library') {
       onConfirm('service', count, 'library');
     } else {
-      onConfirm(effectiveType, count, needsSubType ? subType : undefined);
+      onConfirm(effectiveType as NodeType, count, needsSubType ? subType : undefined);
     }
     onOpenChange(false);
     setCount(1);
