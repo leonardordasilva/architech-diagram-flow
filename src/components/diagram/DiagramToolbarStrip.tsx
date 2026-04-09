@@ -10,7 +10,7 @@ import type { Collaborator } from '@/hooks/useRealtimeCollab';
 interface DiagramToolbarStripProps {
   readOnly: boolean;
   // Toolbar props
-  onAddNode: (type: string) => void;
+  onAddNode: (type: any, subType?: string) => void;
   onDelete: () => void;
   onClearCanvas: () => void;
   onUndo: () => void;
