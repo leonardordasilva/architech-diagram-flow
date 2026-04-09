@@ -15,7 +15,7 @@ export function useIsAdmin(): { isAdmin: boolean; isLoading: boolean } {
         .eq('id', user.id)
         .single();
       if (error) return false;
-      return (data as Record<string, unknown>)?.is_admin === true;
+      return data?.is_admin === true;
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000,

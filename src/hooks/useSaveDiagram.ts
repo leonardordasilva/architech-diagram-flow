@@ -39,7 +39,11 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
   // PERF-05: Read store state at call time instead of subscribing — avoids unnecessary callback recreation
   const save = useCallback(async () => {
     if (!user) return;
-    if (saving) return; // R12: guard against concurrent saves
+    // NOTE: 'saving' is intentionally omitted from deps — it is read as an
+    // entry guard (checked at call time), not used to derive output. Including
+    // it would cause the callback to be recreated on every setSaving() call,
+    // which triggers the saveRef sync effect on every save cycle. (PRD-0032 T1)
+    if (saving) return;
 
     // R5: Throttle temporal — impede saves consecutivos dentro do cooldown
     const now = Date.now();
@@ -113,7 +117,8 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
     }
 
     setSaving(false);
-  }, [user, shareToken, saving, onDiagramLimitReached]); // saving included so ref stays current when guard state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, shareToken, onDiagramLimitReached]);
 
   // PERF-05: Stable ref always pointing to latest save
   const saveRef = useRef<() => void>(() => {});
