@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useDiagramStore } from '@/store/diagramStore';
 import { DbDiagramNodesSchema, DbDiagramEdgesSchema } from '@/schemas/diagramSchema';
+import { decryptDiagramData } from '@/services/cryptoService';
 import type { DiagramNode, DiagramEdge } from '@/types/diagram';
 
 const DEBOUNCE_MS = 300;
@@ -170,10 +171,9 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
           table: 'diagrams',
           filter: `id=eq.${diagramId}`,
         },
-        (payload) => {
+        async (payload) => {
           if (isRemoteUpdate.current) return;
 
-          // QUA-02: Use typed payload
           const newRecord = payload.new as DiagramUpdatePayload;
 
           // PERF-03: Compare updated_at first to avoid expensive JSON operations
@@ -183,15 +183,23 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
           }
           lastUpdatedAtRef.current = remoteUpdatedAt || '';
 
-          const remoteNodes = newRecord.nodes;
-          const remoteEdges = newRecord.edges;
+          let remoteNodes = newRecord.nodes;
+          let remoteEdges = newRecord.edges;
 
-          // FIX: After save, DB stores encrypted envelopes (objects with iv/ciphertext).
-          // Postgres Realtime delivers these raw encrypted objects. Pushing them into the
-          // store would corrupt React Flow (expects arrays), causing "e is not iterable"
-          // and a blank canvas. Skip the update when data is not a plain array.
+          // If data arrives encrypted (objects with iv/ciphertext), decrypt before applying
+          if (remoteNodes && !Array.isArray(remoteNodes)) {
+            try {
+              const decrypted = await decryptDiagramData(remoteNodes, remoteEdges);
+              remoteNodes = decrypted.nodes;
+              remoteEdges = decrypted.edges;
+            } catch {
+              console.warn('[RealtimeCollab] Failed to decrypt remote update — ignoring');
+              return;
+            }
+          }
+
           if (!Array.isArray(remoteNodes) || !Array.isArray(remoteEdges)) {
-            console.debug('[RealtimeCollab] Skipping DB update with non-array (encrypted) data');
+            console.debug('[RealtimeCollab] Skipping DB update with non-array data');
             return;
           }
 
