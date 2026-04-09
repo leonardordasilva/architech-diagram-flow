@@ -3,7 +3,6 @@ import { useAdminUsers, useAdminMutations } from '../hooks/useAdminQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -18,6 +17,8 @@ import {
 import { MoreHorizontal, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import AdminPageHeader from '../components/AdminPageHeader';
+import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell, AdminPagination } from '../components/AdminTable';
 
 export default function AdminUsers() {
   const [page, setPage] = useState(1);
@@ -68,90 +69,112 @@ export default function AdminUsers() {
   const totalPages = Math.ceil((data?.count ?? 0) / 20);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-foreground">Usuários</h1>
+    <div className="space-y-6 admin-animate-in">
+      <AdminPageHeader title="Usuários" description="Gerenciar contas de usuário" />
 
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
         <Input
           placeholder="Buscar por email..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9"
+          className="pl-9 border-0 text-sm"
+          style={{
+            background: 'hsl(var(--admin-surface))',
+            color: 'hsl(var(--admin-text))',
+            outline: '1px solid hsl(var(--admin-border))',
+          }}
         />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left p-3 text-muted-foreground font-medium">Email</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Plano</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Cadastro</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Status</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Carregando...</td></tr>
-              ) : data?.data?.length === 0 ? (
-                <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhum resultado.</td></tr>
-              ) : data?.data?.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0 hover:bg-accent/30">
-                  <td className="p-3 text-foreground">{u.email}</td>
-                  <td className="p-3">
-                    <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
-                      <SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="team">Team</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-3 text-muted-foreground">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
-                  <td className="p-3">
-                    <Badge variant={u.suspended_at ? 'destructive' : 'secondary'}>
-                      {u.suspended_at ? 'Suspenso' : 'Ativo'}
-                    </Badge>
-                  </td>
-                  <td className="p-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleSuspend(u.id, !u.suspended_at)}>
-                          {u.suspended_at ? 'Reativar' : 'Suspender'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to={`/admin/diagrams?userId=${u.id}`}>Ver diagramas</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
-                        >
-                          Deletar conta
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <AdminTable
+        columns={[
+          { header: 'Email' },
+          { header: 'Plano' },
+          { header: 'Cadastro' },
+          { header: 'Status' },
+          { header: '', className: 'w-10' },
+        ]}
+        isLoading={isLoading}
+      >
+        {data?.data?.length === 0 ? (
+          <tr>
+            <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              Nenhum resultado.
+            </td>
+          </tr>
+        ) : data?.data?.map((u) => (
+          <AdminTableRow key={u.id}>
+            <AdminTableCell>
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                  style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
+                >
+                  {u.email[0].toUpperCase()}
+                </div>
+                {u.email}
+              </div>
+            </AdminTableCell>
+            <AdminTableCell>
+              <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
+                <SelectTrigger
+                  className="w-24 h-7 text-xs border-0"
+                  style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="team">Team</SelectItem>
+                </SelectContent>
+              </Select>
+            </AdminTableCell>
+            <AdminTableMutedCell>{new Date(u.created_at).toLocaleDateString('pt-BR')}</AdminTableMutedCell>
+            <AdminTableCell>
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+                style={{
+                  background: u.suspended_at ? 'hsl(0 63% 15%)' : 'hsl(152 69% 15%)',
+                  color: u.suspended_at ? 'hsl(0 84% 65%)' : 'hsl(152 69% 55%)',
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: u.suspended_at ? 'hsl(0 84% 60%)' : 'hsl(var(--admin-success))' }}
+                />
+                {u.suspended_at ? 'Suspenso' : 'Ativo'}
+              </span>
+            </AdminTableCell>
+            <AdminTableCell>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5">
+                    <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleSuspend(u.id, !u.suspended_at)}>
+                    {u.suspended_at ? 'Reativar' : 'Suspender'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/admin/diagrams?userId=${u.id}`}>Ver diagramas</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
+                  >
+                    Deletar conta
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </AdminTableCell>
+          </AdminTableRow>
+        ))}
+      </AdminTable>
 
-      {totalPages > 1 && (
-        <div className="flex items-center gap-2 justify-center">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-          <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Próximo</Button>
-        </div>
-      )}
+      <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setConfirmEmail(''); } }}>
         <AlertDialogContent>

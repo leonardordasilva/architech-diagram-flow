@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminMutations } from '../hooks/useAdminQuery';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import {
@@ -12,6 +10,9 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Plus } from 'lucide-react';
+import AdminPageHeader from '../components/AdminPageHeader';
+import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell } from '../components/AdminTable';
 
 interface Flag {
   id: string;
@@ -53,47 +54,66 @@ export default function AdminFeatureFlags() {
     });
   };
 
-  if (isLoading) return <p className="text-muted-foreground">Carregando...</p>;
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Feature Flags</h1>
-        <Button size="sm" onClick={() => setShowCreate(true)}>Nova flag</Button>
-      </div>
+    <div className="space-y-6 admin-animate-in">
+      <AdminPageHeader
+        title="Feature Flags"
+        description="Controlar funcionalidades do sistema"
+        actions={
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+            style={{ background: 'hsl(var(--admin-accent))', color: 'hsl(222 30% 6%)' }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nova flag
+          </button>
+        }
+      />
 
-      <Card>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left p-3 text-muted-foreground font-medium">Key</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Descrição</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Status</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {flags?.map((f) => (
-                <tr key={f.id} className="border-b border-border last:border-0 hover:bg-accent/30">
-                  <td className="p-3 text-foreground font-mono text-xs">{f.key}</td>
-                  <td className="p-3 text-muted-foreground">{f.description ?? '—'}</td>
-                  <td className="p-3">
-                    <Badge variant={f.enabled ? 'default' : 'secondary'}>
-                      {f.enabled ? 'ON' : 'OFF'}
-                    </Badge>
-                  </td>
-                  <td className="p-3">
-                    <Button variant="outline" size="sm" onClick={() => handleToggle(f.key, !f.enabled)}>
-                      {f.enabled ? 'Desativar' : 'Ativar'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <AdminTable
+        columns={[
+          { header: 'Key' },
+          { header: 'Descrição' },
+          { header: 'Status' },
+          { header: '', className: 'w-24' },
+        ]}
+        isLoading={isLoading}
+      >
+        {flags?.map((f) => (
+          <AdminTableRow key={f.id}>
+            <AdminTableCell mono>{f.key}</AdminTableCell>
+            <AdminTableMutedCell>{f.description ?? '—'}</AdminTableMutedCell>
+            <AdminTableCell>
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+                style={{
+                  background: f.enabled ? 'hsl(152 69% 15%)' : 'hsl(var(--admin-border))',
+                  color: f.enabled ? 'hsl(152 69% 55%)' : 'hsl(var(--admin-text-muted))',
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: f.enabled ? 'hsl(var(--admin-success))' : 'hsl(var(--admin-text-muted))' }}
+                />
+                {f.enabled ? 'ON' : 'OFF'}
+              </span>
+            </AdminTableCell>
+            <AdminTableCell>
+              <button
+                onClick={() => handleToggle(f.key, !f.enabled)}
+                className="px-3 py-1 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text-muted))',
+                }}
+              >
+                {f.enabled ? 'Desativar' : 'Ativar'}
+              </button>
+            </AdminTableCell>
+          </AdminTableRow>
+        ))}
+      </AdminTable>
 
       <AlertDialog open={showCreate} onOpenChange={setShowCreate}>
         <AlertDialogContent>
