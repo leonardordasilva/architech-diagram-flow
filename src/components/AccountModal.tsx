@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 interface AccountModalProps {
   open: boolean;
@@ -92,11 +93,12 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
       setShowPasswordForm(false);
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
       const msgMap: Record<string, string> = {
         'New password should be different from the old password.': t('resetPassword.newPasswordDifferent'),
       };
-      toast({ title: t('account.resetPasswordError'), description: msgMap[err.message] ?? err.message, variant: 'destructive' });
+      toast({ title: t('account.resetPasswordError'), description: msgMap[msg] ?? msg, variant: 'destructive' });
     } finally {
       setResetLoading(false);
     }
@@ -146,8 +148,8 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
 
       setAvatarUrl(urlWithBust);
       toast({ title: t('account.avatarUpdated') });
-    } catch (err: any) {
-      toast({ title: t('account.avatarUploadError'), description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('account.avatarUploadError'), description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setUploading(false);
       // Reset input so same file can be re-selected
@@ -346,8 +348,8 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
                     onOpenChange(false);
                     await supabase.auth.signOut();
                     navigate('/');
-                  } catch (err: any) {
-                    toast({ title: t('account.deleteAccountError'), description: err.message, variant: 'destructive' });
+                  } catch (err: unknown) {
+                    toast({ title: t('account.deleteAccountError'), description: getErrorMessage(err), variant: 'destructive' });
                   } finally {
                     setDeleting(false);
                   }

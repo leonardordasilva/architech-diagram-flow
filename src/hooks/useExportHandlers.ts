@@ -1,24 +1,26 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useReactFlow, getNodesBounds } from '@xyflow/react';
+import { useReactFlow, getNodesBounds, type Node } from '@xyflow/react';
 import { toPng, toSvg } from 'html-to-image';
 import { toast } from '@/hooks/use-toast';
 import { useShallow } from 'zustand/react/shallow';
 import { useDiagramStore } from '@/store/diagramStore';
 import { exportToMermaid } from '@/services/exportService';
 
+/** Classes to exclude from image export — module-level Set for O(1) lookup. PRD-0028 F3-T4 */
+const EXPORT_EXCLUDE_CLASSES = new Set([
+  'react-flow__panel',
+  'react-flow__controls',
+  'react-flow__minimap',
+  'react-flow__attribution',
+  'export-exclude',
+]);
+
 /** Filter out UI controls from image export */
 const exportFilter = (domNode: HTMLElement) => {
   if (!domNode.classList) return true;
-  const excludeClasses = [
-    'react-flow__panel',
-    'react-flow__controls',
-    'react-flow__minimap',
-    'react-flow__attribution',
-    'export-exclude',
-  ];
-  for (const cls of excludeClasses) {
-    if (domNode.classList.contains(cls)) return false;
+  for (const cls of domNode.classList) {
+    if (EXPORT_EXCLUDE_CLASSES.has(cls)) return false;
   }
   return true;
 };
@@ -27,7 +29,7 @@ const exportFilter = (domNode: HTMLElement) => {
  * Calculate full diagram bounds by combining node bounds with actual rendered edge SVG paths.
  * This ensures edges that extend beyond nodes (e.g. top/bottom handles, offsets) are included.
  */
-function getFullDiagramBounds(flowNodes: any[]) {
+function getFullDiagramBounds(flowNodes: Node[]) {
   const nodeBounds = getNodesBounds(flowNodes);
   let minX = nodeBounds.x;
   let minY = nodeBounds.y;

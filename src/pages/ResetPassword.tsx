@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 export default function ResetPasswordPage() {
   const { t } = useTranslation();
@@ -60,12 +61,13 @@ export default function ResetPasswordPage() {
       if (error) throw error;
       toast({ title: t('resetPassword.success') });
       navigate('/app');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
       const msgMap: Record<string, string> = {
         'New password should be different from the old password.': t('resetPassword.newPasswordDifferent'),
         'Auth session missing!': t('resetPassword.sessionExpired'),
       };
-      const translated = msgMap[err.message] || err.message;
+      const translated = msgMap[msg] || msg;
       toast({ title: t('common.error'), description: translated, variant: 'destructive' });
     } finally {
       setLoading(false);

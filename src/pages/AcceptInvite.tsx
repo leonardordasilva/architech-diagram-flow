@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 export default function AcceptInvite() {
   const { t } = useTranslation();
@@ -42,8 +43,8 @@ export default function AcceptInvite() {
         if (!res.ok) throw new Error(data.error ?? res.statusText);
         setStatus('success');
         setTimeout(() => navigate('/workspace'), 2000);
-      } catch (err: any) {
-        setErrorMsg(err.message);
+      } catch (err: unknown) {
+        setErrorMsg(getErrorMessage(err));
         setStatus('error');
       }
     }

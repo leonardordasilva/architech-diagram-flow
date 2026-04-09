@@ -29,6 +29,7 @@ import WorkspaceInviteModal from '@/components/WorkspaceInviteModal';
 import UpgradeModal from '@/components/UpgradeModal';
 import { usePlanStore } from '@/store/planStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 export default function Workspace() {
   const { t } = useTranslation();
@@ -66,7 +67,7 @@ export default function Workspace() {
       queryClient.refetchQueries({ queryKey: ['workspace-members', workspace?.id] });
       toast({ title: t('workspace.memberRemoved') });
     },
-    onError: (err: any) =>
+    onError: (err: Error) =>
       toast({ title: t('workspace.memberRemoveError'), description: err.message, variant: 'destructive' }),
   });
 
@@ -74,7 +75,7 @@ export default function Workspace() {
     mutationFn: ({ memberId, role }: { memberId: string; role: 'editor' | 'viewer' }) =>
       updateMemberRole(workspace!.id, memberId, role),
     onSuccess: () => queryClient.refetchQueries({ queryKey: ['workspace-members', workspace?.id] }),
-    onError: (err: any) =>
+    onError: (err: Error) =>
       toast({ title: t('workspace.roleUpdateError'), description: err.message, variant: 'destructive' }),
   });
 
@@ -85,7 +86,7 @@ export default function Workspace() {
       setEditingName(false);
       toast({ title: t('workspace.renameSuccess') });
     },
-    onError: (err: any) =>
+    onError: (err: Error) =>
       toast({ title: t('workspace.renameError'), description: err.message, variant: 'destructive' }),
   });
 
@@ -114,8 +115,8 @@ export default function Workspace() {
       setWorkspaceCtx({ id: ws.id, name: ws.name, ownerId: ws.owner_id, role: 'owner' });
       queryClient.invalidateQueries({ queryKey: ['workspace'] });
       toast({ title: t('workspace.created') });
-    } catch (err: any) {
-      toast({ title: t('workspace.createError'), description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('workspace.createError'), description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setCreatingWorkspace(false);
     }
@@ -139,8 +140,8 @@ export default function Workspace() {
       if (!res.ok) throw new Error(data.error ?? res.statusText);
       toast({ title: t('workspace.inviteResent', { email }) });
       queryClient.refetchQueries({ queryKey: ['workspace-members', workspace?.id] });
-    } catch (err: any) {
-      toast({ title: t('workspace.inviteError'), description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('workspace.inviteError'), description: getErrorMessage(err), variant: 'destructive' });
     }
   }
 

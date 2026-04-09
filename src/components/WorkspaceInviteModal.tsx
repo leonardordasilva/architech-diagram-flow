@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
@@ -59,8 +60,8 @@ export default function WorkspaceInviteModal({
       toast({ title: t('workspace.inviteSent', { email: email.trim() }) });
       onSuccess?.();
       handleClose(false);
-    } catch (err: any) {
-      toast({ title: t('workspace.inviteError'), description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('workspace.inviteError'), description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setLoading(false);
     }

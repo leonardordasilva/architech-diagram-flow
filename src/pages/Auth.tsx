@@ -6,6 +6,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { clearAutoSave } from '@/hooks/useAutoSave';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 import logoIcon from '../img/MicroFlow_Icon_Low.avif';
 
 type AuthView = 'login' | 'signup' | 'forgot' | 'confirm-email';
@@ -56,7 +57,8 @@ export default function AuthPage() {
         setView('confirm-email');
         return;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
       const msgMap: Record<string, string> = {
         'Invalid login credentials': t('auth.invalidCredentials'),
         'Email not confirmed': t('auth.emailNotConfirmed'),
@@ -66,7 +68,7 @@ export default function AuthPage() {
         'For security purposes, you can only request this once every 60 seconds': t('auth.rateLimited'),
       };
       // I2: Fall back to a generic i18n message instead of leaking raw English API strings
-      const translated = msgMap[err.message] ?? t('auth.unknownError');
+      const translated = msgMap[msg] ?? t('auth.unknownError');
       toast({ title: t('common.error'), description: translated, variant: 'destructive' });
     } finally {
       setLoading(false);

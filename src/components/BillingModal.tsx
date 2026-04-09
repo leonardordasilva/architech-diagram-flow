@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { toast } from '@/hooks/use-toast';
 import UpgradeModal from '@/components/UpgradeModal';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 const CHECKOUT_POLL_INTERVAL_MS = 3_000;
 const CHECKOUT_MAX_POLLS = 10;
@@ -149,8 +150,8 @@ export default function BillingModal({
       if (error || !data?.url) throw new Error(error?.message || t('billing.portalError'));
       const top = window.top || window;
       top.location.href = data.url;
-    } catch (err: any) {
-      toast({ title: t('billing.portalError'), description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('billing.portalError'), description: getErrorMessage(err), variant: 'destructive' });
       setPortalLoading(false);
     }
   }
