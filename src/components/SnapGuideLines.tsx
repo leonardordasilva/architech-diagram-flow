@@ -12,7 +12,7 @@ export default function SnapGuideLines({ guides }: { guides: GuideLine[] }) {
   if (guides.length === 0) return null;
 
   return (
-    <svg className="absolute inset-0 pointer-events-none z-50" style={{ width: '100%', height: '100%' }}>
+    <svg aria-hidden="true" className="absolute inset-0 pointer-events-none z-50" style={{ width: '100%', height: '100%' }}>
       {guides.map((guide, i) => {
         if (guide.type === 'vertical') {
           const x = guide.pos * scale + tx;

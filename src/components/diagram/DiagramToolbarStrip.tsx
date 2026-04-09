@@ -6,11 +6,10 @@ import { Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Collaborator } from '@/hooks/useRealtimeCollab';
+import type { NodeType } from '@/types/diagram';
 
-interface DiagramToolbarStripProps {
-  readOnly: boolean;
-  // Toolbar props
-  onAddNode: (type: any, subType?: string) => void;
+export interface ToolbarSectionProps {
+  onAddNode: (type: NodeType, subType?: string) => void;
   onDelete: () => void;
   onClearCanvas: () => void;
   onUndo: () => void;
@@ -28,7 +27,9 @@ interface DiagramToolbarStripProps {
   allowedExportFormats: string[];
   onUpgradeRequest: (feature: string) => void;
   actionsDisabled: boolean;
-  // Header props
+}
+
+export interface HeaderSectionProps {
   shareToken?: string;
   diagramId: string | null;
   isCollaborator: boolean;
@@ -42,57 +43,29 @@ interface DiagramToolbarStripProps {
   onOpenBilling: () => void;
   onOpenAccount: () => void;
   onOpenMyDiagrams: () => void;
-  onOpenShortcuts: () => void;
   plan: 'free' | 'pro' | 'team';
 }
 
-export default function DiagramToolbarStrip(props: DiagramToolbarStripProps) {
+interface DiagramToolbarStripProps {
+  readOnly: boolean;
+  toolbar: ToolbarSectionProps;
+  header: HeaderSectionProps;
+  onOpenShortcuts: () => void;
+}
+
+export default function DiagramToolbarStrip({ readOnly, toolbar, header, onOpenShortcuts }: DiagramToolbarStripProps) {
   const { t } = useTranslation();
 
-  if (props.readOnly) return null;
+  if (readOnly) return null;
 
   return (
     <>
-      <Toolbar
-        onAddNode={props.onAddNode}
-        onDelete={props.onDelete}
-        onClearCanvas={props.onClearCanvas}
-        onUndo={props.onUndo}
-        onRedo={props.onRedo}
-        onAutoLayout={props.onAutoLayout}
-        onExportPNG={props.onExportPNG}
-        onExportSVG={props.onExportSVG}
-        onExportMermaid={props.onExportMermaid}
-        onExportJSON={props.onExportJSON}
-        onImportJSON={props.onImportJSON}
-        diagramName={props.diagramName}
-        onDiagramNameChange={props.onDiagramNameChange}
-        darkMode={props.darkMode}
-        onToggleDarkMode={props.onToggleDarkMode}
-        allowedExportFormats={props.allowedExportFormats}
-        onUpgradeRequest={props.onUpgradeRequest}
-        actionsDisabled={props.actionsDisabled}
-      />
+      <Toolbar {...toolbar} />
       <WorkspaceContextSelector />
-      <DiagramHeader
-        shareToken={props.shareToken}
-        diagramId={props.diagramId}
-        isCollaborator={props.isCollaborator}
-        user={props.user}
-        collaborators={props.collaborators}
-        saving={props.saving}
-        refreshing={props.refreshing}
-        onSave={props.onSave}
-        onRefresh={props.onRefresh}
-        onSignOut={props.onSignOut}
-        onOpenBilling={props.onOpenBilling}
-        onOpenAccount={props.onOpenAccount}
-        onOpenMyDiagrams={props.onOpenMyDiagrams}
-        plan={props.plan}
-      />
+      <DiagramHeader {...header} />
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={props.onOpenShortcuts} aria-label={t('canvas.keyboardShortcuts')}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpenShortcuts} aria-label={t('canvas.keyboardShortcuts')}>
             <Keyboard className="h-4 w-4" />
           </Button>
         </TooltipTrigger>

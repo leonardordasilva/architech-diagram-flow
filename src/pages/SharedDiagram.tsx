@@ -23,21 +23,28 @@ export default function SharedDiagram() {
     let cancelled = false;
 
     async function load() {
-      const diagram = await loadDiagramByToken(shareToken!);
-      if (cancelled) return;
+      try {
+        const diagram = await loadDiagramByToken(shareToken!);
+        if (cancelled) return;
 
-      if (diagram) {
-        const store = useDiagramStore.getState();
-        store.loadDiagram(diagram.nodes, diagram.edges);
-        store.setDiagramName(diagram.title);
-        if (diagram.integrityWarning) {
-          toast({ title: t('integrity.warning'), description: t('integrity.hashMismatch'), variant: 'destructive', duration: 10000 });
+        if (diagram) {
+          const store = useDiagramStore.getState();
+          store.loadDiagram(diagram.nodes, diagram.edges);
+          store.setDiagramName(diagram.title);
+          if (diagram.integrityWarning) {
+            toast({ title: t('integrity.warning'), description: t('integrity.hashMismatch'), variant: 'destructive', duration: 10000 });
+          }
+        } else {
+          setNotFound(true);
         }
-      } else {
-        setNotFound(true);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('[SharedDiagram] Failed to load diagram:', err);
+          setNotFound(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      if (!cancelled) setLoading(false);
     }
 
     load();

@@ -55,6 +55,9 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
       .single()
       .then(({ data }) => {
         if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      })
+      .catch((err) => {
+        console.warn('[AccountModal] Failed to load avatar:', err);
       });
   }, [open, user]);
 
@@ -173,6 +176,7 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
               type="button"
               onClick={handleAvatarClick}
               disabled={uploading}
+              aria-busy={uploading}
               className="relative group h-20 w-20 rounded-full overflow-hidden border-2 border-border bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('account.changeAvatar')}
             >
@@ -249,7 +253,7 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
                     required
                   />
                 </div>
-                <Button type="submit" size="sm" className="w-full" disabled={resetLoading}>
+                <Button type="submit" size="sm" className="w-full" disabled={resetLoading} aria-busy={resetLoading}>
                   {resetLoading ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
                   {t('resetPassword.submit')}
                 </Button>
@@ -337,6 +341,7 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={deleting}
+                aria-busy={deleting}
                 onClick={async (e) => {
                   e.preventDefault();
                   setDeleting(true);

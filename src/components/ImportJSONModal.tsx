@@ -65,6 +65,9 @@ export default function ImportJSONModal({ open, onOpenChange, onImport }: Import
     }
     const reader = new FileReader();
     reader.onload = (ev) => setJsonText(ev.target?.result as string);
+    reader.onerror = () => {
+      toast({ title: t('importModal.invalidJSON'), description: reader.error?.message ?? 'File read failed', variant: 'destructive' });
+    };
     reader.readAsText(file);
   };
 
@@ -93,6 +96,8 @@ export default function ImportJSONModal({ open, onOpenChange, onImport }: Import
 
         <div className="space-y-3">
           <div
+            role="button"
+            tabIndex={0}
             className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${
               dragging
                 ? 'border-primary bg-primary/10'
@@ -102,6 +107,8 @@ export default function ImportJSONModal({ open, onOpenChange, onImport }: Import
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+            aria-label={t('importModal.dragOrClick')}
           >
             <FileJson className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">

@@ -78,13 +78,18 @@ export default function ShareDiagramModal({
 
   const handleCopyLink = async () => {
     if (!shareLink) return;
-    await navigator.clipboard.writeText(shareLink);
-    toast({ title: t('shareDiagramModal.linkCopied') });
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      toast({ title: t('shareDiagramModal.linkCopied') });
+    } catch {
+      toast({ title: t('shareModal.copyError', 'Falha ao copiar link'), variant: 'destructive' });
+    }
   };
 
-  // Debounced search
+  // Debounced search — only fires when query contains '@' or has 3+ chars to avoid noisy requests
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
+    if (!query.includes('@') && query.length < 3) { setResults([]); return; }
     const timeout = setTimeout(async () => {
       setSearching(true);
       const users = await searchUsersByEmail(query, ownerId);

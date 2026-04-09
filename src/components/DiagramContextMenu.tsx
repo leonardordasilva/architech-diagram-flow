@@ -20,10 +20,13 @@ function DiagramContextMenu({ contextMenu, nodes, onSpawn, onClose }: DiagramCon
   const { t } = useTranslation();
   return (
     <div
+      role="menu"
+      aria-label={t('contextMenu.ariaLabel', 'Context menu')}
       className="fixed z-50 rounded-md border bg-popover p-1 shadow-md min-w-[180px]"
       style={{ top: contextMenu.y, left: contextMenu.x }}
     >
       <button
+        role="menuitem"
         className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => {
           const nd = nodes.find((n) => n.id === contextMenu.nodeId);

@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Node } from '@xyflow/react';
 import { useDiagramStore } from '@/store/diagramStore';
-
-const SNAP_THRESHOLD = 8;
+import { SNAP_THRESHOLD } from '@/constants/diagramConstants';
 const THROTTLE_MS = 16; // ~1 frame at 60fps
 
 interface GuideLine {

@@ -17,6 +17,9 @@ const IDB_STORE = 'diagrams';
 const IDB_KEY = 'current';
 const IDB_VERSION = 1;
 
+// PERF-06: Chunk size for binary string assembly during compression
+const COMPRESS_CHUNK_SIZE = 8192;
+
 import type { DiagramNode, DiagramEdge } from '@/types/diagram';
 
 // R5-SEC-03: Schema for legacy autosave validation
@@ -64,10 +67,9 @@ async function compressString(input: string): Promise<string> {
     merged.set(chunk, offset);
     offset += chunk.length;
   }
-  const CHUNK = 8192;
   let binary = '';
-  for (let i = 0; i < merged.length; i += CHUNK) {
-    binary += String.fromCharCode.apply(null, Array.from(merged.subarray(i, i + CHUNK)));
+  for (let i = 0; i < merged.length; i += COMPRESS_CHUNK_SIZE) {
+    binary += String.fromCharCode.apply(null, Array.from(merged.subarray(i, i + COMPRESS_CHUNK_SIZE)));
   }
   return btoa(binary);
 }
@@ -184,7 +186,8 @@ export function useAutoSave() {
         // R15: Try IndexedDB first; fall back to localStorage on error
         try {
           await saveToIDB(compressed);
-        } catch {
+        } catch (idbErr) {
+          console.warn('[useAutoSave] IDB write failed, falling back to localStorage:', idbErr);
           localStorage.setItem(STORAGE_KEY, compressed);
         }
 
@@ -192,8 +195,8 @@ export function useAutoSave() {
       } catch (e: unknown) {
         // PERF-06: Handle storage quota exceeded
         const eName = e instanceof Error ? e.name : '';
-        const eCode = e && typeof e === 'object' && 'code' in e ? (e as any).code : undefined;
-        if (eName === 'QuotaExceededError' || eCode === 22) {
+        const eCode = e instanceof DOMException ? e.code : undefined;
+        if (eName === 'QuotaExceededError' || eCode === DOMException.QUOTA_EXCEEDED_ERR) {
           toast({
             title: i18n.t('autoSave.storageFull'),
             description: i18n.t('autoSave.storageFullDesc'),
@@ -227,6 +230,9 @@ export async function getAutoSave(): Promise<AutoSaveData | null> {
     }
 
     // Fallback: compressed localStorage format (v2)
+    const localStorageAvailable = typeof localStorage !== 'undefined';
+    if (!localStorageAvailable) return null;
+
     const compressed = localStorage.getItem(STORAGE_KEY);
     if (compressed) {
       const json = await decompressString(compressed);
@@ -261,8 +267,10 @@ export async function getAutoSave(): Promise<AutoSaveData | null> {
 export function clearAutoSave() {
   // R15: Clear both IndexedDB and localStorage
   clearIDB().catch(() => {});
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(LEGACY_STORAGE_KEY);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }
   // PRD-0028 F3-T3: Close cached IDB connection
   if (cachedDb) {
     cachedDb.close();

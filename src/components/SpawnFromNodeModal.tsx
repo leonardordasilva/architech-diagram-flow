@@ -39,12 +39,12 @@ export default function SpawnFromNodeModal({
   const { t } = useTranslation();
   const isQueue = sourceNodeType === 'queue';
   const isService = sourceNodeType === 'service';
-  const [type, setType] = useState<NodeType>('database');
+  const [type, setType] = useState<NodeType | 'library'>('database');
   const [subType, setSubType] = useState('Oracle');
 
   // Update default subType when type changes
-  const handleTypeChange = (v: string) => {
-    setType(v as NodeType);
+  const handleTypeChange = (v: NodeType | 'library') => {
+    setType(v);
     if (v === 'database') setSubType('Oracle');
     else if (v === 'queue') setSubType('IBM MQ');
     else if (v === 'external') setSubType('REST');
@@ -65,8 +65,8 @@ export default function SpawnFromNodeModal({
   const handleConfirm = () => {
     if (count < 1) return;
     const needsSubType = effectiveType === 'database' || effectiveType === 'queue' || effectiveType === 'external';
-    // Pass 'library' as subType when type is 'library' (pseudo-type for embedding)
-    if (type === 'library' as any) {
+    // 'library' is a UI-only pseudo-type: maps to service node with 'library' subType
+    if (type === 'library') {
       onConfirm('service', count, 'library');
     } else {
       onConfirm(effectiveType, count, needsSubType ? subType : undefined);
@@ -96,7 +96,7 @@ export default function SpawnFromNodeModal({
           ) : (
             <div className="space-y-2">
               <Label>{t('spawnModal.objectType')}</Label>
-              <Select value={type} onValueChange={handleTypeChange}>
+              <Select value={type} onValueChange={(v) => handleTypeChange(v as NodeType | 'library')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -163,7 +163,7 @@ export default function SpawnFromNodeModal({
           {/* Alert de embedding ou conexão manual */}
           {(() => {
             const isEmbeddingOracle = isService && effectiveType === 'database' && subType === 'Oracle';
-            const isEmbeddingLibrary = isService && type === ('library' as any);
+            const isEmbeddingLibrary = isService && type === 'library';
             const isEmbedding = isEmbeddingOracle || isEmbeddingLibrary;
 
             if (isEmbedding) {

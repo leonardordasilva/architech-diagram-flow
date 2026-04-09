@@ -55,6 +55,8 @@ const ELK_DIRECTION_MAP: Record<LayoutDirection, string> = {
 interface ElkNode { id: string; x?: number; y?: number; width: number; height: number; }
 interface ElkResult { children?: ElkNode[]; }
 
+const ELK_TIMEOUT_MS = 30_000;
+
 let worker: Worker | null = null;
 let reqId = 0;
 const pending = new Map<string, { resolve: (v: ElkResult) => void; reject: (e: Error) => void }>();
@@ -104,10 +106,23 @@ export async function getELKLayoutedElements(
   const id = String(++reqId);
 
   const layouted = await new Promise<ElkResult>((resolve, reject) => {
-    pending.set(id, { resolve, reject });
+    // Timeout guard: reject if worker never responds (e.g. hangs or crashes)
+    const timer = setTimeout(() => {
+      if (pending.has(id)) {
+        pending.delete(id);
+        reject(new Error(`ELK layout timed out after ${ELK_TIMEOUT_MS}ms`));
+      }
+    }, ELK_TIMEOUT_MS);
+
+    pending.set(id, {
+      resolve: (v) => { clearTimeout(timer); resolve(v); },
+      reject: (e) => { clearTimeout(timer); reject(e); },
+    });
+
     try {
       getWorker().postMessage({ id, graph });
     } catch (err) {
+      clearTimeout(timer);
       pending.delete(id);
       reject(err);
     }

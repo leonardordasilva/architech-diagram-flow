@@ -37,12 +37,9 @@ export function usePlanLimits() {
 
   useEffect(() => {
     setLoading(isLoading);
-  }, [isLoading, setLoading]);
-
-  useEffect(() => {
     if (data) setLimits(data);
     else if (!isLoading) setLimits(FREE_LIMITS);
-  }, [data, isLoading, setLimits]);
+  }, [data, isLoading, setLimits, setLoading]);
 
   return usePlanStore((s) => s.limits);
 }

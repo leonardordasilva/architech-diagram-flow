@@ -139,6 +139,8 @@ export async function saveDiagram(
     const contentHash = await computeContentHash(nodes, edges);
     const updatePayload: TablesUpdate<'diagrams'> = {
       title,
+      // Double-cast: Supabase types `nodes`/`edges` columns as Json (opaque), but the encrypted
+    // envelope is structurally compatible. `as unknown as Json` is the idiomatic bridge.
       nodes: encrypted.nodes as unknown as Tables<'diagrams'>['nodes'],
       edges: encrypted.edges as unknown as Tables<'diagrams'>['edges'],
       node_count: nodes.length,
@@ -273,9 +275,12 @@ export async function loadDiagramById(id: string): Promise<DiagramRecord | null>
 }
 
 export async function deleteDiagram(id: string, ownerId: string): Promise<void> {
+  // R9: Soft delete — set deleted_at instead of removing the row.
+  // RLS policies on UPDATE already filter deleted_at IS NULL, so the record
+  // becomes invisible to all queries without losing audit history.
   const { error } = await supabase
     .from('diagrams')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('owner_id', ownerId);
   if (error) throw error;

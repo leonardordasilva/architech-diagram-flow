@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Check } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface ShareModalProps {
   open: boolean;
@@ -22,9 +23,13 @@ export default function ShareModal({ open, onOpenChange, shareUrl }: ShareModalP
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: t('shareModal.copyError', 'Falha ao copiar link'), variant: 'destructive' });
+    }
   };
 
   return (

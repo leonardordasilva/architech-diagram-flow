@@ -12,7 +12,9 @@ const RECOVERY_FLAG_KEY = 'microflow_show_recovery';
 
 /** Call this to signal that a recovery banner should appear on next canvas load */
 export function triggerRecoveryBanner() {
-  sessionStorage.setItem(RECOVERY_FLAG_KEY, '1');
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem(RECOVERY_FLAG_KEY, '1');
+  }
 }
 
 export default function RecoveryBanner() {
@@ -23,6 +25,7 @@ export default function RecoveryBanner() {
 
   useEffect(() => {
     // Only show if explicitly triggered (e.g. after deleting a diagram)
+    if (typeof sessionStorage === 'undefined') return;
     const flag = sessionStorage.getItem(RECOVERY_FLAG_KEY);
     if (flag && nodes.length === 0 && !dismissed) {
       getAutoSave().then((data) => {

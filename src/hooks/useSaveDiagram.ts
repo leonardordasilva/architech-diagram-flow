@@ -34,6 +34,8 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  // isSavingRef mirrors `saving` but is always current — prevents stale-closure double-save
+  const isSavingRef = useRef(false);
   const lastSaveTimestampRef = useRef<number>(0);
 
   // PERF-05: Read store state at call time instead of subscribing — avoids unnecessary callback recreation
@@ -43,7 +45,7 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
     // entry guard (checked at call time), not used to derive output. Including
     // it would cause the callback to be recreated on every setSaving() call,
     // which triggers the saveRef sync effect on every save cycle. (PRD-0032 T1)
-    if (saving) return;
+    if (isSavingRef.current) return;
 
     // R5: Throttle temporal — impede saves consecutivos dentro do cooldown
     const now = Date.now();
@@ -68,6 +70,7 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
       }
     }
 
+    isSavingRef.current = true;
     setSaving(true);
     let savedRecord: { id: string } | null = null;
     const isNewDiagram = !diagramId;
@@ -89,6 +92,7 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
         console.error('[useSaveDiagram] Save error:', err);
         toast({ title: t('save.error'), description: msg, variant: 'destructive' });
       }
+      isSavingRef.current = false;
       setSaving(false);
       return;
     }
@@ -116,6 +120,7 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
       toast({ title: t('save.savedToCloud') });
     }
 
+    isSavingRef.current = false;
     setSaving(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, shareToken, onDiagramLimitReached]);

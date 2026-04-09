@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { NodeType } from '@/types/diagram';
+import { MAX_DIAGRAM_NAME_LENGTH, DIAGRAM_NAME_WARNING_THRESHOLD } from '@/constants/diagramConstants';
 
 interface ToolbarProps {
   onAddNode: (type: NodeType, subType?: string) => void;
@@ -167,12 +168,12 @@ function Toolbar({
               (e.target as HTMLInputElement).blur();
             }
           }}
-          maxLength={100}
+          maxLength={MAX_DIAGRAM_NAME_LENGTH}
           placeholder={t('toolbar.diagramName')}
           aria-label={t('toolbar.diagramName')}
         />
         <div aria-live="polite" aria-atomic="true" className="absolute -bottom-4 right-0 text-[10px] text-muted-foreground">
-          {localName.length > 80 ? `${localName.length}/100` : ''}
+          {localName.length > DIAGRAM_NAME_WARNING_THRESHOLD ? `${localName.length}/${MAX_DIAGRAM_NAME_LENGTH}` : ''}
         </div>
       </div>
 

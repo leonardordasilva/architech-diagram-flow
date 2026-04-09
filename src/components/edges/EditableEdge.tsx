@@ -6,6 +6,7 @@ import {
 } from '@xyflow/react';
 import { PROTOCOL_CONFIGS, type EdgeProtocol, type NodeType } from '@/types/diagram';
 import { getDbColor } from '@/constants/databaseColors';
+import { SNAP_THRESHOLD } from '@/constants/diagramConstants';
 
 interface Point {
   x: number;
@@ -29,8 +30,12 @@ function getSourceNodeColor(sourceNodeType?: NodeType, sourceNodeSubType?: strin
 
 interface EditableEdgeData {
   midOffsetX?: number;
+  /** @deprecated use midOffsetX — kept for backward compatibility with older saved diagrams */
+  midOffset?: number;
   sourceOffsetY?: number;
   targetOffsetY?: number;
+  /** true when sourceOffsetY === targetOffsetY so segments move together */
+  offsetsLocked?: boolean;
   protocol?: EdgeProtocol;
   sourceNodeType?: NodeType;
   sourceNodeSubType?: string;
@@ -86,11 +91,11 @@ export default function EditableEdge({
   const sourceColor = isQueueConn ? 'hsl(157, 52%, 49%)' : getSourceNodeColor(edgeData?.sourceNodeType, edgeData?.sourceNodeSubType);
 
   // Offsets
-  const midOffsetX = edgeData?.midOffsetX ?? (edgeData as any)?.midOffset ?? 0;
+  const midOffsetX = edgeData?.midOffsetX ?? edgeData?.midOffset ?? 0;
   const sourceOffsetY = edgeData?.sourceOffsetY ?? 0;
   const targetOffsetY = edgeData?.targetOffsetY ?? 0;
   // Check if visually aligned (actual rendered Y positions, not just offsets)
-  const rawLocked = !!(edgeData as any)?.offsetsLocked;
+  const rawLocked = !!edgeData?.offsetsLocked;
   const visuallyAligned = rawLocked && Math.abs((sourceY + sourceOffsetY) - (targetY + targetOffsetY)) < 2;
   const offsetsLockedRef = useRef(visuallyAligned);
   offsetsLockedRef.current = visuallyAligned;
@@ -210,7 +215,6 @@ export default function EditableEdge({
             );
           } else {
             const dy = svgPt.y - draggingRef.current.startSvg.y;
-            const SNAP_THRESHOLD = 8;
 
             // If locked (were aligned at drag start), move both together
             if (draggingRef.current.locked) {
@@ -226,7 +230,7 @@ export default function EditableEdge({
               setEdges((edges) =>
                 edges.map((edge) => {
                   if (edge.id !== id) return edge;
-                  const curTargetY = (edge.data as any)?.targetOffsetY ?? 0;
+                  const curTargetY = (edge.data as EditableEdgeData)?.targetOffsetY ?? 0;
                   if (Math.abs(newSourceY - curTargetY) < SNAP_THRESHOLD) {
                     return { ...edge, data: { ...edge.data, sourceOffsetY: curTargetY, targetOffsetY: curTargetY, offsetsLocked: true } };
                   }
@@ -238,7 +242,7 @@ export default function EditableEdge({
               setEdges((edges) =>
                 edges.map((edge) => {
                   if (edge.id !== id) return edge;
-                  const curSourceY = (edge.data as any)?.sourceOffsetY ?? 0;
+                  const curSourceY = (edge.data as EditableEdgeData)?.sourceOffsetY ?? 0;
                   if (Math.abs(newTargetY - curSourceY) < SNAP_THRESHOLD) {
                     return { ...edge, data: { ...edge.data, sourceOffsetY: curSourceY, targetOffsetY: curSourceY, offsetsLocked: true } };
                   }

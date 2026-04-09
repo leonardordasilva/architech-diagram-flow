@@ -112,14 +112,20 @@ export default function BillingModal({
 
       pollIntervalRef.current = setInterval(async () => {
         pollAttemptsRef.current += 1;
-        const sub = await fetchSubscription(user!.id);
-        const updated = sub?.plan && sub.plan !== 'free' && sub.status === 'active';
+        try {
+          const sub = await fetchSubscription(user!.id);
+          const updated = sub?.plan && sub.plan !== 'free' && sub.status === 'active';
 
-        if (updated || pollAttemptsRef.current >= CHECKOUT_MAX_POLLS) {
+          if (updated || pollAttemptsRef.current >= CHECKOUT_MAX_POLLS) {
+            clearInterval(pollIntervalRef.current!);
+            await queryClient.invalidateQueries({ queryKey: ['subscription', user!.id] });
+            await queryClient.invalidateQueries({ queryKey: ['plan-limits', user!.id] });
+            setCheckoutProcessing(false);
+          }
+        } catch (err: unknown) {
           clearInterval(pollIntervalRef.current!);
-          await queryClient.invalidateQueries({ queryKey: ['subscription', user!.id] });
-          await queryClient.invalidateQueries({ queryKey: ['plan-limits', user!.id] });
           setCheckoutProcessing(false);
+          toast({ title: t('billing.checkoutError', 'Checkout verification failed'), description: getErrorMessage(err), variant: 'destructive' });
         }
       }, CHECKOUT_POLL_INTERVAL_MS);
     }
@@ -219,7 +225,7 @@ export default function BillingModal({
 
             <div className="flex gap-3 flex-wrap">
               {plan !== 'free' ? (
-                <Button variant="outline" size="sm" onClick={openPortal} disabled={portalLoading} className="gap-2">
+                <Button variant="outline" size="sm" onClick={openPortal} disabled={portalLoading} aria-busy={portalLoading} className="gap-2">
                   {portalLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
                   {t('billing.manageSubscription')}
                 </Button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,8 +29,8 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
   const [internalSvcs, setInternalSvcs] = useState<string[]>([]);
 
   // PRD-0028 F3-T2: Stable keys to detect external changes to databases/services
-  const dbKey = JSON.stringify(data?.internalDatabases || []);
-  const svcKey = JSON.stringify(data?.internalServices || []);
+  const dbKey = useMemo(() => JSON.stringify(data?.internalDatabases || []), [data?.internalDatabases]);
+  const svcKey = useMemo(() => JSON.stringify(data?.internalServices || []), [data?.internalServices]);
 
   useEffect(() => {
     if (data) {
@@ -124,7 +124,7 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
   };
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-80 bg-card border-l border-border shadow-xl z-40 flex flex-col animate-in slide-in-from-right-5 duration-200">
+    <div role="region" aria-label={t('nodePanel.properties')} className="absolute right-0 top-0 bottom-0 w-80 bg-card border-l border-border shadow-xl z-40 flex flex-col animate-in slide-in-from-right-5 duration-200">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h3 className="text-sm font-semibold text-foreground">{t('nodePanel.properties')}</h3>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t('nodePanel.closePanel')}>

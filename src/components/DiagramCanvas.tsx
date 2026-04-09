@@ -30,6 +30,7 @@ import StatusBar from '@/components/StatusBar';
 import DiagramToolbarStrip from '@/components/diagram/DiagramToolbarStrip';
 import DiagramStatusOverlays from '@/components/diagram/DiagramStatusOverlays';
 import { nodeTypes, edgeTypes, MINIMAP_NODE_COLORS, defaultEdgeOptions } from '@/components/diagram/diagramFlowConfig';
+import type { LayoutDirection } from '@/services/layoutService';
 import { canConnect, connectionErrorMessage } from '@/utils/connectionRules';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useThemeToggle } from '@/hooks/useThemeToggle';
@@ -112,14 +113,54 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
   }, [onConnectAction, nodes]);
 
   const handleAutoLayout = useCallback((engine: string, dir: string) => {
-    if (engine === 'elk') autoLayoutELK(dir as any).catch(() => toast({ title: t('canvas.layoutError'), variant: 'destructive' }));
-    else autoLayout(dir as any);
+    const direction = dir as LayoutDirection;
+    if (engine === 'elk') autoLayoutELK(direction).catch(() => toast({ title: t('canvas.layoutError'), variant: 'destructive' }));
+    else autoLayout(direction);
   }, [autoLayoutELK, autoLayout, t]);
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background" onKeyDown={handleKeyDown} tabIndex={0} role="application" aria-label="Editor de diagramas de arquitetura">
       <header className="flex items-center justify-center gap-3 border-b bg-card/80 px-4 py-2 backdrop-blur-sm">
-        <DiagramToolbarStrip readOnly={readOnly} onAddNode={handleAddNode} onDelete={deleteSelected} onClearCanvas={() => modalsRef.current?.openClearConfirm()} onUndo={undo} onRedo={redo} onAutoLayout={handleAutoLayout} onExportPNG={handleExportPNG} onExportSVG={handleExportSVG} onExportMermaid={() => modalsRef.current?.openMermaid()} onExportJSON={handleExportJSON} onImportJSON={() => modalsRef.current?.openImportJSON()} diagramName={diagramName} onDiagramNameChange={setDiagramName} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} allowedExportFormats={planLimits.allowedExportFormats} onUpgradeRequest={openUpgradeModal} actionsDisabled={toolbarLocked} shareToken={shareToken} diagramId={diagramId ?? null} isCollaborator={isCollaborator} user={user} collaborators={collaborators} saving={saving} refreshing={refreshing} onSave={handleSaveToCloud} onRefresh={handleRefreshDiagram} onSignOut={handleSignOutRequest} onOpenBilling={() => setBillingOpen(true)} onOpenAccount={() => setAccountOpen(true)} onOpenMyDiagrams={() => setMyDiagramsOpen(true)} onOpenShortcuts={() => modalsRef.current?.openShortcuts()} plan={planLimits.plan as 'free' | 'pro' | 'team'} />
+        <DiagramToolbarStrip
+          readOnly={readOnly}
+          toolbar={{
+            onAddNode: handleAddNode,
+            onDelete: deleteSelected,
+            onClearCanvas: () => modalsRef.current?.openClearConfirm(),
+            onUndo: undo,
+            onRedo: redo,
+            onAutoLayout: handleAutoLayout,
+            onExportPNG: handleExportPNG,
+            onExportSVG: handleExportSVG,
+            onExportMermaid: () => modalsRef.current?.openMermaid(),
+            onExportJSON: handleExportJSON,
+            onImportJSON: () => modalsRef.current?.openImportJSON(),
+            diagramName,
+            onDiagramNameChange: setDiagramName,
+            darkMode,
+            onToggleDarkMode: toggleDarkMode,
+            allowedExportFormats: planLimits.allowedExportFormats,
+            onUpgradeRequest: openUpgradeModal,
+            actionsDisabled: toolbarLocked,
+          }}
+          header={{
+            shareToken,
+            diagramId: diagramId ?? null,
+            isCollaborator,
+            user,
+            collaborators,
+            saving,
+            refreshing,
+            onSave: handleSaveToCloud,
+            onRefresh: handleRefreshDiagram,
+            onSignOut: handleSignOutRequest,
+            onOpenBilling: () => setBillingOpen(true),
+            onOpenAccount: () => setAccountOpen(true),
+            onOpenMyDiagrams: () => setMyDiagramsOpen(true),
+            plan: planLimits.plan as 'free' | 'pro' | 'team',
+          }}
+          onOpenShortcuts={() => modalsRef.current?.openShortcuts()}
+        />
       </header>
 
       <div className="relative flex-1" ref={reactFlowWrapper}>

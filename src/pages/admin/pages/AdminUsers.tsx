@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAdminUsers, useAdminMutations } from '../hooks/useAdminQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,13 @@ export default function AdminUsers() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null);
   const [confirmEmail, setConfirmEmail] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   const filters = debouncedSearch ? { email: debouncedSearch } : undefined;
   const { data, isLoading } = useAdminUsers(page, filters);
@@ -33,8 +40,8 @@ export default function AdminUsers() {
 
   const handleSearch = (val: string) => {
     setSearch(val);
-    clearTimeout((window as any).__adminSearchTimer);
-    (window as any).__adminSearchTimer = setTimeout(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
       setDebouncedSearch(val);
       setPage(1);
     }, 300);

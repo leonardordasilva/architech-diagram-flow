@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDiagramStore } from '@/store/diagramStore';
 import { DbDiagramNodesSchema, DbDiagramEdgesSchema } from '@/schemas/diagramSchema';
 import { decryptDiagramData } from '@/services/cryptoService';
+import { toast } from '@/hooks/use-toast';
+import i18n from '@/i18n';
 import type { DiagramNode, DiagramEdge } from '@/types/diagram';
 
 const DEBOUNCE_MS = 300;
@@ -106,9 +108,10 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
 
         temporal.resume();
 
-        setTimeout(() => {
-          isRemoteUpdate.current = false;
-        }, 50);
+        // Reset flag synchronously after applying the update so that a second
+        // remote update arriving immediately is never silently dropped.
+        // (Previous approach used a 50ms setTimeout which left a race window.)
+        isRemoteUpdate.current = false;
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
@@ -205,6 +208,11 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
               remoteEdges = decrypted.edges;
             } catch {
               console.warn('[RealtimeCollab] Failed to decrypt remote update — ignoring');
+              toast({
+                title: i18n.t('realtimeCollab.decryptError', 'Falha ao sincronizar atualização remota'),
+                description: i18n.t('realtimeCollab.decryptErrorDesc', 'Não foi possível descriptografar a atualização. O diagrama pode estar desatualizado.'),
+                variant: 'destructive',
+              });
               return;
             }
           }
@@ -227,9 +235,8 @@ export function useRealtimeCollab(shareToken: string | null, realtimeCollabEnabl
           }
 
           temporal.resume();
-          setTimeout(() => {
-            isRemoteUpdate.current = false;
-          }, 50);
+          // Reset flag synchronously — no 50ms race window (mirrors broadcast channel fix at line 112)
+          isRemoteUpdate.current = false;
         },
       )
       .subscribe();
