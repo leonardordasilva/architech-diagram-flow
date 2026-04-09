@@ -118,3 +118,88 @@
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Admin area tokens */
+.admin-area {
+  --admin-bg: 222 30% 6%;
+  --admin-surface: 222 25% 10%;
+  --admin-surface-hover: 222 25% 13%;
+  --admin-border: 222 20% 16%;
+  --admin-accent: 190 95% 50%;
+  --admin-accent-muted: 190 60% 25%;
+  --admin-text: 210 40% 92%;
+  --admin-text-muted: 215 15% 55%;
+  --admin-success: 152 69% 45%;
+  --admin-warning: 38 92% 55%;
+}
+
+.admin-area {
+  background: hsl(var(--admin-bg));
+  color: hsl(var(--admin-text));
+}
+
+@keyframes admin-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes admin-slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes admin-pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px hsl(190 95% 50% / 0.15); }
+  50% { box-shadow: 0 0 16px hsl(190 95% 50% / 0.3); }
+}
+
+@keyframes admin-number-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.admin-animate-in {
+  animation: admin-fade-in 0.4s ease-out both;
+}
+
+.admin-stagger-1 { animation-delay: 0.05s; }
+.admin-stagger-2 { animation-delay: 0.1s; }
+.admin-stagger-3 { animation-delay: 0.15s; }
+.admin-stagger-4 { animation-delay: 0.2s; }
+.admin-stagger-5 { animation-delay: 0.25s; }
+.admin-stagger-6 { animation-delay: 0.3s; }
+
+.admin-stat-card {
+  background: linear-gradient(135deg, hsl(var(--admin-surface)) 0%, hsl(222 25% 12%) 100%);
+  border: 1px solid hsl(var(--admin-border));
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-stat-card:hover {
+  border-color: hsl(var(--admin-accent) / 0.3);
+  box-shadow: 0 4px 24px hsl(var(--admin-accent) / 0.08);
+}
+
+.admin-table-row {
+  transition: background-color 0.15s;
+}
+
+.admin-table-row:hover {
+  background-color: hsl(var(--admin-surface-hover));
+}
+
+.admin-sidebar-link {
+  transition: all 0.15s ease;
+  border-left: 2px solid transparent;
+}
+
+.admin-sidebar-link:hover {
+  background-color: hsl(var(--admin-surface-hover));
+  border-left-color: hsl(var(--admin-accent) / 0.3);
+}
+
+.admin-sidebar-link-active {
+  background-color: hsl(var(--admin-accent-muted));
+  border-left-color: hsl(var(--admin-accent));
+  color: hsl(var(--admin-accent));
+}

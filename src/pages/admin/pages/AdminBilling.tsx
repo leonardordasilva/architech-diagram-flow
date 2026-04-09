@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { useAdminMutations } from '../hooks/useAdminQuery';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
+import { CreditCard } from 'lucide-react';
+import AdminPageHeader from '../components/AdminPageHeader';
+import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell } from '../components/AdminTable';
 
 interface Subscription {
   id: string;
@@ -50,52 +51,85 @@ export default function AdminBilling() {
   const activeSubs = subs?.filter((s) => s.status === 'active') ?? [];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-foreground">Billing</h1>
+    <div className="space-y-6 admin-animate-in">
+      <AdminPageHeader title="Billing" description="Gerenciar subscriptions e pagamentos" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Subscriptions Ativas: {activeSubs.length}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left p-3 text-muted-foreground font-medium">Plano</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Próxima cobrança</th>
-                <th className="text-left p-3 text-muted-foreground font-medium">Stripe ID</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Carregando...</td></tr>
-              ) : subs?.length === 0 ? (
-                <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Nenhuma subscription.</td></tr>
-              ) : subs?.map((s) => (
-                <tr key={s.id} className="border-b border-border last:border-0 hover:bg-accent/30">
-                  <td className="p-3"><Badge>{s.plan}</Badge></td>
-                  <td className="p-3">
-                    <Badge variant={s.status === 'active' ? 'default' : 'secondary'}>{s.status}</Badge>
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}
-                  </td>
-                  <td className="p-3 text-muted-foreground font-mono text-xs">{s.stripe_subscription_id ?? '—'}</td>
-                  <td className="p-3">
-                    {s.stripe_subscription_id && s.status === 'active' && (
-                      <Button variant="outline" size="sm" className="text-destructive" onClick={() => setCancelId(s.stripe_subscription_id!)}>
-                        Cancelar
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {/* Summary card */}
+      <div
+        className="rounded-xl p-5 flex items-center gap-4 admin-animate-in admin-stagger-1"
+        style={{ background: 'hsl(var(--admin-surface))', border: '1px solid hsl(var(--admin-border))' }}
+      >
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, hsl(152 69% 45%), hsl(190 95% 50%))' }}
+        >
+          <CreditCard className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>{activeSubs.length}</p>
+          <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>Subscriptions ativas</p>
+        </div>
+      </div>
+
+      <AdminTable
+        columns={[
+          { header: 'Plano' },
+          { header: 'Status' },
+          { header: 'Próxima cobrança' },
+          { header: 'Stripe ID' },
+          { header: '', className: 'w-24' },
+        ]}
+        isLoading={isLoading}
+      >
+        {subs?.length === 0 ? (
+          <tr>
+            <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              Nenhuma subscription.
+            </td>
+          </tr>
+        ) : subs?.map((s) => (
+          <AdminTableRow key={s.id}>
+            <AdminTableCell>
+              <span
+                className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
+                style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
+              >
+                {s.plan}
+              </span>
+            </AdminTableCell>
+            <AdminTableCell>
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+                style={{
+                  background: s.status === 'active' ? 'hsl(152 69% 15%)' : 'hsl(var(--admin-border))',
+                  color: s.status === 'active' ? 'hsl(152 69% 55%)' : 'hsl(var(--admin-text-muted))',
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: s.status === 'active' ? 'hsl(var(--admin-success))' : 'hsl(var(--admin-text-muted))' }}
+                />
+                {s.status}
+              </span>
+            </AdminTableCell>
+            <AdminTableMutedCell>
+              {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}
+            </AdminTableMutedCell>
+            <AdminTableMutedCell mono>{s.stripe_subscription_id ?? '—'}</AdminTableMutedCell>
+            <AdminTableCell>
+              {s.stripe_subscription_id && s.status === 'active' && (
+                <button
+                  onClick={() => setCancelId(s.stripe_subscription_id!)}
+                  className="px-3 py-1 rounded-lg text-xs font-medium transition-colors"
+                  style={{ background: 'hsl(0 63% 15%)', color: 'hsl(0 84% 65%)' }}
+                >
+                  Cancelar
+                </button>
+              )}
+            </AdminTableCell>
+          </AdminTableRow>
+        ))}
+      </AdminTable>
 
       <AlertDialog open={!!cancelId} onOpenChange={(o) => { if (!o) setCancelId(null); }}>
         <AlertDialogContent>
