@@ -19,6 +19,8 @@ const Billing = lazy(() => import('./pages/Billing'));
 const Workspace = lazy(() => import('./pages/Workspace'));
 const WorkspaceDiagrams = lazy(() => import('./pages/WorkspaceDiagrams'));
 const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
+const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
+const AdminGuard = lazy(() => import('./pages/admin/AdminGuard'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,6 +54,11 @@ const App = () => (
                 <Route path="/workspace" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
                 <Route path="/workspace/diagrams" element={<ProtectedRoute><WorkspaceDiagrams /></ProtectedRoute>} />
                 <Route path="/invite" element={<AcceptInvite />} />
+                <Route path="/admin/*" element={
+                  <AdminGuard>
+                    <AdminApp />
+                  </AdminGuard>
+                } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
