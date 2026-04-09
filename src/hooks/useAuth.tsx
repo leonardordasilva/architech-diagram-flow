@@ -45,6 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // INTENTIONAL: Full page reload (not React Router navigate) to ensure
+    // all Zustand stores, React Query caches, IndexedDB autosave state,
+    // and Supabase realtime channels are fully destroyed.
+    // Do NOT replace with navigate('/') — it would leave stale state.
+    // @ref PRD-0028 F7-T1 / Code Review #10
     window.location.href = '/';
   };
 
