@@ -450,6 +450,7 @@
     "checkoutProcessing": "Processing your payment…",
     "checkoutProcessingDesc": "Please wait while we confirm your subscription. This may take a few seconds.",
     "subscriptionError": "Could not load subscription details.",
+    "cancelScheduled": "Your subscription is canceled and will expire on {{date}}. You will keep access until then.",
     "status": {
       "active": "Active",
       "past_due": "Past due",
