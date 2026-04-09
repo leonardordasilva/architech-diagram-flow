@@ -220,6 +220,7 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
                   <Input
                     value={svc}
                     onChange={(e) => handleSvcChange(i, e.target.value)}
+                    onBlur={commitSvcs}
                     className="h-8 text-xs flex-1"
                   />
                   <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeSvc(i)} aria-label={t('nodePanel.removeLibrary')}>
