@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import PricingCards, { BillingCycle } from './PricingCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 import { Zap } from 'lucide-react';
 
 interface Props {
@@ -35,8 +36,8 @@ export default function UpgradeModal({ open, onOpenChange, featureName, descript
       if (error || !data?.url) throw new Error(error?.message || t('upgrade.checkoutError'));
       const top = window.top || window;
       top.location.href = data.url;
-    } catch (err: any) {
-      toast({ title: t('upgrade.checkoutError'), description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('upgrade.checkoutError'), description: getErrorMessage(err), variant: 'destructive' });
       setLoading(null);
     }
   }

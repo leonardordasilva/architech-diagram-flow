@@ -10,6 +10,7 @@ import { usePlanStore } from '@/store/planStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { SAVE_COOLDOWN_MS } from '@/constants/storageKeys';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 interface UseSaveDiagramOptions {
   shareToken?: string;
@@ -92,14 +93,15 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
           toast({ title: t('save.savedToCloud') });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // B6: Trigger raises DIAGRAM_LIMIT_EXCEEDED when the server-side cap is hit
       // (race condition or direct API access that bypassed the client-side check)
-      if (err?.message === 'DIAGRAM_LIMIT_EXCEEDED') {
+      const msg = getErrorMessage(err);
+      if (msg === 'DIAGRAM_LIMIT_EXCEEDED') {
         onDiagramLimitReached?.();
       } else {
         console.error('[useSaveDiagram] Save error:', err);
-        toast({ title: t('save.error'), description: err.message, variant: 'destructive' });
+        toast({ title: t('save.error'), description: msg, variant: 'destructive' });
       }
     } finally {
       setSaving(false);

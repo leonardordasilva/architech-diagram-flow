@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileJson } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 import { ImportDiagramSchema } from '@/schemas/diagramSchema';
 import { ZodError } from 'zod';
 
@@ -39,12 +40,12 @@ export default function ImportJSONModal({ open, onOpenChange, onImport }: Import
       onImport({ nodes: validated.nodes, edges: validated.edges, name: validated.name });
       onOpenChange(false);
       setJsonText('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof ZodError) {
         const messages = err.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('\n');
         toast({ title: t('importModal.validationFailed'), description: messages, variant: 'destructive' });
       } else {
-        toast({ title: t('importModal.invalidJSON'), description: err.message, variant: 'destructive' });
+        toast({ title: t('importModal.invalidJSON'), description: getErrorMessage(err), variant: 'destructive' });
       }
     }
   };

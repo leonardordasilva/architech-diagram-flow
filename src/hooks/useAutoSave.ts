@@ -86,33 +86,36 @@ async function decompressString(base64: string): Promise<string> {
 }
 
 // R15 + I8: IndexedDB helpers with versioned schema and migration handler
+// PRD-0028 F3-T3: Cached IDB connection to avoid reopening on every call
+let cachedDb: IDBDatabase | null = null;
+
 function openIDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(IDB_NAME, IDB_VERSION);
-
     request.onupgradeneeded = (event) => {
       const db = request.result;
-      // I8: Only create the store if it doesn't exist yet (safe for future version bumps)
       if (!db.objectStoreNames.contains(IDB_STORE)) {
         db.createObjectStore(IDB_STORE);
       }
-      // Future migrations: use event.oldVersion to apply incremental upgrades
       void event;
     };
-
-    // I8: onblocked fires when another open connection prevents the version upgrade.
-    // Log a warning so developers know to reload all tabs after a schema change.
     request.onblocked = () => {
       console.warn('[useAutoSave] IDB upgrade blocked — close other tabs and reload.');
     };
-
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 
+async function getIDB(): Promise<IDBDatabase> {
+  if (cachedDb) return cachedDb;
+  cachedDb = await openIDB();
+  cachedDb.onclose = () => { cachedDb = null; };
+  return cachedDb;
+}
+
 async function saveToIDB(data: string): Promise<void> {
-  const db = await openIDB();
+  const db = await getIDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readwrite');
     tx.objectStore(IDB_STORE).put(data, IDB_KEY);
@@ -122,7 +125,7 @@ async function saveToIDB(data: string): Promise<void> {
 }
 
 async function loadFromIDB(): Promise<string | null> {
-  const db = await openIDB();
+  const db = await getIDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readonly');
     const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
@@ -132,7 +135,7 @@ async function loadFromIDB(): Promise<string | null> {
 }
 
 async function clearIDB(): Promise<void> {
-  const db = await openIDB();
+  const db = await getIDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readwrite');
     tx.objectStore(IDB_STORE).delete(IDB_KEY);
@@ -182,9 +185,11 @@ export function useAutoSave() {
         }
 
         setSaveStatus('saved');
-      } catch (e: any) {
+      } catch (e: unknown) {
         // PERF-06: Handle storage quota exceeded
-        if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+        const eName = e instanceof Error ? e.name : '';
+        const eCode = e && typeof e === 'object' && 'code' in e ? (e as any).code : undefined;
+        if (eName === 'QuotaExceededError' || eCode === 22) {
           toast({
             title: i18n.t('autoSave.storageFull'),
             description: i18n.t('autoSave.storageFullDesc'),
@@ -254,4 +259,9 @@ export function clearAutoSave() {
   clearIDB().catch(() => {});
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(LEGACY_STORAGE_KEY);
+  // PRD-0028 F3-T3: Close cached IDB connection
+  if (cachedDb) {
+    cachedDb.close();
+    cachedDb = null;
+  }
 }

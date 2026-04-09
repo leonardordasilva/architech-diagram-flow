@@ -69,7 +69,7 @@ export async function listDiagramShares(diagramId: string): Promise<ShareRecord[
   if (error) return [];
 
   // Enrich with emails
-  const userIds = (data || []).map((s: any) => s.shared_with_id);
+  const userIds = (data || []).map((s: ShareRecord) => s.shared_with_id);
   if (userIds.length === 0) return [];
 
   const { data: profiles } = await supabase
@@ -77,16 +77,16 @@ export async function listDiagramShares(diagramId: string): Promise<ShareRecord[
     .select('id, email')
     .in('id', userIds);
 
-  const emailMap = new Map((profiles || []).map((p: any) => [p.id, p.email]));
+  const emailMap = new Map((profiles || []).map((p: { id: string; email: string }) => [p.id, p.email]));
 
   // I4: Warn if any share references a deleted user (orphaned record).
   // RLS should prevent this, but log it for observability.
-  const orphaned = (data || []).filter((s: any) => !emailMap.has(s.shared_with_id));
+  const orphaned = (data || []).filter((s: ShareRecord) => !emailMap.has(s.shared_with_id));
   if (orphaned.length > 0) {
-    console.warn('[shareService] Orphaned share records (user deleted?):', orphaned.map((s: any) => s.id));
+    console.warn('[shareService] Orphaned share records (user deleted?):', orphaned.map((s: ShareRecord) => s.id));
   }
 
-  return (data || []).map((s: any) => ({
+  return (data || []).map((s: ShareRecord) => ({
     ...s,
     shared_with_email: emailMap.get(s.shared_with_id) || 'Desconhecido',
   })) as ShareRecord[];
@@ -111,19 +111,19 @@ export async function loadSharedWithMe(userId: string): Promise<
     .eq('shared_with_id', userId);
   if (error || !shares || shares.length === 0) return [];
 
-  const diagramIds = shares.map((s: any) => s.diagram_id);
-  const ownerIds = [...new Set(shares.map((s: any) => s.owner_id))];
+  const diagramIds = shares.map((s: { diagram_id: string; owner_id: string }) => s.diagram_id);
+  const ownerIds = [...new Set(shares.map((s: { diagram_id: string; owner_id: string }) => s.owner_id))];
 
   const [{ data: diagrams }, { data: profiles }] = await Promise.all([
     supabase.from('diagrams').select('id, title, updated_at, nodes, edges, owner_id').in('id', diagramIds),
     supabase.from('profiles').select('id, email').in('id', ownerIds),
   ]);
 
-  const emailMap = new Map((profiles || []).map((p: any) => [p.id, p.email]));
+  const emailMap = new Map((profiles || []).map((p: { id: string; email: string }) => [p.id, p.email]));
 
   const results: { diagram_id: string; title: string; owner_email: string; updated_at: string; nodes: DiagramNode[]; edges: DiagramEdge[] }[] = [];
 
-  for (const d of (diagrams || []) as any[]) {
+  for (const d of (diagrams || []) as { id: string; title: string; updated_at: string; nodes: unknown; edges: unknown; owner_id: string }[]) {
     try {
       // Decrypt nodes/edges (handles both encrypted envelopes and plain arrays)
       const { nodes: rawNodes, edges: rawEdges } = await decryptDiagramData(

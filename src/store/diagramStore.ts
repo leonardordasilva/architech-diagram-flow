@@ -19,7 +19,8 @@ import { usePlanStore } from '@/store/planStore';
 // Lazy import of toast to avoid circular dependency at module load time
 import { toast } from '@/hooks/use-toast';
 
-const createNodeId = () => `node_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+// PRD-0028 F6-T2: Use crypto.randomUUID() for guaranteed uniqueness
+const createNodeId = () => `node_${crypto.randomUUID()}`;
 
 interface DiagramState {
   nodes: DiagramNode[];

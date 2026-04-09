@@ -51,20 +51,24 @@ const ELK_DIRECTION_MAP: Record<LayoutDirection, string> = {
   BT: 'UP',
 };
 
+// PRD-0028 F2-T1: Typed ELK interfaces
+interface ElkNode { id: string; x?: number; y?: number; width: number; height: number; }
+interface ElkResult { children?: ElkNode[]; }
+
 let worker: Worker | null = null;
 let reqId = 0;
-const pending = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
+const pending = new Map<string, { resolve: (v: ElkResult) => void; reject: (e: Error) => void }>();
 
 function getWorker(): Worker {
   if (!worker) {
     worker = new Worker(new URL('../workers/elkWorker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e: MessageEvent<{ id: string; result?: any; error?: string }>) => {
+    worker.onmessage = (e: MessageEvent<{ id: string; result?: ElkResult; error?: string }>) => {
       const { id, result, error } = e.data;
       const p = pending.get(id);
       if (!p) return;
       pending.delete(id);
       if (error) p.reject(new Error(error));
-      else p.resolve(result);
+      else p.resolve(result!);
     };
   }
   return worker;
@@ -99,7 +103,7 @@ export async function getELKLayoutedElements(
 
   const id = String(++reqId);
 
-  const layouted = await new Promise<any>((resolve, reject) => {
+  const layouted = await new Promise<ElkResult>((resolve, reject) => {
     pending.set(id, { resolve, reject });
     try {
       getWorker().postMessage({ id, graph });
@@ -110,7 +114,7 @@ export async function getELKLayoutedElements(
   });
 
   const layoutedNodes = nodes.map((node) => {
-    const elkNode = layouted.children?.find((n: any) => n.id === node.id);
+    const elkNode = layouted.children?.find((n: ElkNode) => n.id === node.id);
     return {
       ...node,
       position: {
