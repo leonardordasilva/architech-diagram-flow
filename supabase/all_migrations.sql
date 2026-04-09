@@ -14,7 +14,7 @@
 --   2. After each migration, append the new SQL here with a separator comment
 --   3. Keep migration separators in chronological order
 --
--- Last updated: 2026-03-28 (PRD-0022)
+-- Last updated: 2026-04-09 (PRD-0029, PRD-0031, admin-implementation-plan)
 -- ============================================================
 
 
@@ -1555,3 +1555,119 @@ AS $$
     AND (share_token_expires_at IS NULL OR share_token_expires_at > now())
   LIMIT 1;
 $$;
+
+
+-- ── migration: 20260409_prd0029_is_admin_on_profiles.sql ─────────────────────
+-- PRD-0029 T1: Mover validação de admin do VITE_ADMIN_EMAIL (env var exposta no
+-- bundle) para um campo is_admin na tabela profiles, verificado server-side.
+-- Referência: docs/prd/prd0029.md
+
+-- 1. Adicionar coluna is_admin com default FALSE para não impactar usuários existentes
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.profiles.is_admin IS
+  'Indica se o usuário tem acesso à área administrativa. '
+  'Deve ser definido apenas via service_role (nunca pelo cliente). '
+  'Substitui VITE_ADMIN_EMAIL — ver PRD-0029 T1.';
+
+-- 2. RLS: usuário autenticado pode ler apenas seu próprio is_admin
+--    (necessário para o hook useIsAdmin no cliente)
+CREATE POLICY "profiles_read_own_is_admin"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (auth.uid() = id);
+
+-- 3. Garantir que nenhuma policy permita que o cliente altere is_admin:
+--    A policy "Users manage own profile" (migration 03) usa FOR ALL com
+--    auth.uid() = id, o que tecnicamente permitiria UPDATE em is_admin.
+--    Recriar como SELECT + INSERT + UPDATE separadas, excluindo is_admin do UPDATE.
+DROP POLICY IF EXISTS "Users manage own profile" ON public.profiles;
+
+-- INSERT: usuário insere apenas seu próprio perfil (criado pelo trigger handle_new_user)
+CREATE POLICY "profiles_insert_own"
+  ON public.profiles FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = id);
+
+-- UPDATE: usuário pode atualizar apenas campos não-sensíveis (email, avatar_url, plan)
+--         is_admin só pode ser alterado via service_role
+CREATE POLICY "profiles_update_own"
+  ON public.profiles FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id
+    AND is_admin = (SELECT p.is_admin FROM public.profiles p WHERE p.id = auth.uid())
+  );
+
+-- 4. Índice parcial para lookup rápido de admins (poucos registros, mas útil para auditoria)
+CREATE INDEX IF NOT EXISTS idx_profiles_is_admin
+  ON public.profiles (id)
+  WHERE is_admin = true;
+
+
+-- ── migration: 20260409_admin_plan_suspended_at_on_profiles.sql ──────────────
+-- admin-implementation-plan.md §2.3 / §2.10: Coluna suspended_at para suporte
+-- à funcionalidade de suspensão de usuários na área admin.
+-- Referência: docs/admin-implementation-plan.md
+
+-- 1. Adicionar coluna suspended_at (NULL = não suspenso)
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS suspended_at timestamptz;
+
+COMMENT ON COLUMN public.profiles.suspended_at IS
+  'Timestamp de suspensão do usuário. NULL = conta ativa. '
+  'Definido pela Edge Function admin-suspend-user via service_role. '
+  'O AuthProvider deve verificar este campo e forçar logout se não-nulo. '
+  'Referência: docs/admin-implementation-plan.md §2.3';
+
+-- 2. Índice parcial para lookup de usuários suspensos (admin dashboard)
+CREATE INDEX IF NOT EXISTS idx_profiles_suspended_at
+  ON public.profiles (suspended_at)
+  WHERE suspended_at IS NOT NULL;
+
+
+-- ── migration: 20260409_prd0031_revision_number_on_diagrams.sql ──────────────
+-- PRD-0031 T2: Adicionar revision_number em diagrams para deduplicação precisa
+-- de updates no canal Realtime, substituindo a comparação por string ISO de
+-- updated_at (imprecisa em saves simultâneos no mesmo milissegundo).
+-- Referência: docs/prd/prd0031.md
+
+-- 1. Adicionar coluna revision_number com default 0
+ALTER TABLE public.diagrams
+  ADD COLUMN IF NOT EXISTS revision_number bigint NOT NULL DEFAULT 0;
+
+COMMENT ON COLUMN public.diagrams.revision_number IS
+  'Contador monotônico incrementado automaticamente a cada UPDATE. '
+  'Usado pelo hook useRealtimeCollab para deduplicação precisa de updates remotos, '
+  'substituindo a comparação por updated_at (imprecisa em saves simultâneos). '
+  'Referência: docs/prd/prd0031.md T2.';
+
+-- 2. Função que incrementa revision_number antes de cada UPDATE
+CREATE OR REPLACE FUNCTION public.increment_revision_number()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.revision_number = OLD.revision_number + 1;
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.increment_revision_number() IS
+  'Trigger function: incrementa revision_number antes de cada UPDATE em diagrams. '
+  'Garante monotonicidade mesmo em transações concorrentes.';
+
+-- 3. Trigger BEFORE UPDATE para auto-incremento
+DROP TRIGGER IF EXISTS diagrams_revision_trigger ON public.diagrams;
+
+CREATE TRIGGER diagrams_revision_trigger
+  BEFORE UPDATE ON public.diagrams
+  FOR EACH ROW
+  EXECUTE FUNCTION public.increment_revision_number();
+
+-- 4. Índice para consultas que ordenam ou filtram por revision_number
+--    (útil para Realtime e para auditoria de versões)
+CREATE INDEX IF NOT EXISTS idx_diagrams_revision_number
+  ON public.diagrams (id, revision_number);
