@@ -45,6 +45,5 @@ Sentry.init({
   },
 });
 
-import("./App.tsx").then(({ default: App }) => {
-  createRoot(document.getElementById("root")!).render(<App />);
-});
+import App from "./App";
+createRoot(document.getElementById("root")!).render(<App />);
