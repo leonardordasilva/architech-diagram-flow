@@ -43,7 +43,7 @@ interface DiagramToolbarStripProps {
   onOpenAccount: () => void;
   onOpenMyDiagrams: () => void;
   onOpenShortcuts: () => void;
-  plan: string;
+  plan: 'free' | 'pro' | 'team';
 }
 
 export default function DiagramToolbarStrip(props: DiagramToolbarStripProps) {
