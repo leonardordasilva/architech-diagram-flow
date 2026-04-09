@@ -17,17 +17,9 @@ import { useSnapGuides } from '@/hooks/useSnapGuides';
 import SnapGuideLines from '@/components/SnapGuideLines';
 import { toast } from '@/hooks/use-toast';
 import { useDiagramStore } from '@/store/diagramStore';
-
-import ServiceNode from '@/components/nodes/ServiceNode';
-import DatabaseNode from '@/components/nodes/DatabaseNode';
-import QueueNode from '@/components/nodes/QueueNode';
-import ExternalNode from '@/components/nodes/ExternalNode';
-import EditableEdge from '@/components/edges/EditableEdge';
-import Toolbar from '@/components/Toolbar';
 import type { DiagramNodeData, DiagramNode, DiagramEdge, NodeType } from '@/types/diagram';
 import { DiagramModals, type DiagramModalsHandle } from '@/components/DiagramModals';
 import { CanvasOverlays, type CanvasOverlaysHandle } from '@/components/CanvasOverlays';
-
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSaveDiagram } from '@/hooks/useSaveDiagram';
@@ -38,76 +30,41 @@ import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import RecoveryBanner from '@/components/RecoveryBanner';
-import DiagramHeader from '@/components/DiagramHeader';
 import UpgradeModal from '@/components/UpgradeModal';
-import WorkspaceContextSelector from '@/components/WorkspaceContextSelector';
 import BillingModal from '@/components/BillingModal';
 import AccountModal from '@/components/AccountModal';
 import MyDiagramsModal from '@/pages/MyDiagrams';
-
-import { canConnect, connectionErrorMessage } from '@/utils/connectionRules';
-import { Keyboard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import StatusBar from '@/components/StatusBar';
-
-// Extracted hooks
+import DiagramToolbarStrip from '@/components/diagram/DiagramToolbarStrip';
+import { nodeTypes, edgeTypes, MINIMAP_NODE_COLORS, defaultEdgeOptions } from '@/components/diagram/diagramFlowConfig';
+import { canConnect, connectionErrorMessage } from '@/utils/connectionRules';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useThemeToggle } from '@/hooks/useThemeToggle';
 import { useInteractionMode } from '@/hooks/useInteractionMode';
 import { useDiagramRefresh } from '@/hooks/useDiagramRefresh';
 import { useAddNodeToCanvas } from '@/hooks/useAddNodeToCanvas';
 
-const nodeTypes = {
-  service: ServiceNode,
-  database: DatabaseNode,
-  queue: QueueNode,
-  external: ExternalNode,
-};
-
-const edgeTypes = { editable: EditableEdge };
-
-// R5-PERF-02: Static minimap color map (outside component)
-const MINIMAP_NODE_COLORS: Record<string, string> = {
-  service: 'hsl(217, 91%, 60%)',
-  database: 'hsl(142, 71%, 45%)',
-  queue: 'hsl(45, 93%, 47%)',
-  external: 'hsl(220, 9%, 46%)',
-};
-
 interface DiagramCanvasProps {
   shareToken?: string;
-  /** When true, all editing is disabled (read-only shared view) */
   readOnly?: boolean;
 }
 
 function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps) {
   const { t } = useTranslation();
 
-  // ITEM 6: Grouped Zustand selectors with useShallow
   const { nodes, edges, diagramName, diagramId, isCollaborator } = useDiagramStore(
     useShallow((s) => ({
-      nodes: s.nodes,
-      edges: s.edges,
-      diagramName: s.diagramName,
-      diagramId: s.currentDiagramId,
-      isCollaborator: s.isCollaborator,
+      nodes: s.nodes, edges: s.edges, diagramName: s.diagramName,
+      diagramId: s.currentDiagramId, isCollaborator: s.isCollaborator,
     })),
   );
 
   const { setDiagramName, onNodesChange, onEdgesChange, onConnect: onConnectAction, onNodeDragHandler, addNodesFromSource, deleteSelected, autoLayout, autoLayoutELK, clearCanvas, loadDiagram } = useDiagramStore(
     useShallow((s) => ({
-      setDiagramName: s.setDiagramName,
-      onNodesChange: s.onNodesChange,
-      onEdgesChange: s.onEdgesChange,
-      onConnect: s.onConnect,
-      onNodeDragHandler: s.onNodeDragHandler,
-      addNodesFromSource: s.addNodesFromSource,
-      deleteSelected: s.deleteSelected,
-      autoLayout: s.autoLayout,
-      autoLayoutELK: s.autoLayoutELK,
-      clearCanvas: s.clearCanvas,
-      loadDiagram: s.loadDiagram,
+      setDiagramName: s.setDiagramName, onNodesChange: s.onNodesChange, onEdgesChange: s.onEdgesChange,
+      onConnect: s.onConnect, onNodeDragHandler: s.onNodeDragHandler, addNodesFromSource: s.addNodesFromSource,
+      deleteSelected: s.deleteSelected, autoLayout: s.autoLayout, autoLayoutELK: s.autoLayoutELK,
+      clearCanvas: s.clearCanvas, loadDiagram: s.loadDiagram,
     })),
   );
 
@@ -131,11 +88,8 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
     signOut();
   }, [signOut]);
 
-  // saas0001: plan limits
   const planLimits = usePlanLimits();
-  // saas0003: workspace context
   useWorkspace();
-  const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeatureName, setUpgradeFeatureName] = useState('');
   const [billingOpen, setBillingOpen] = useState(false);
@@ -147,7 +101,6 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
     setUpgradeModalOpen(true);
   }, []);
 
-  // Block toolbar when logged-in user has an unsaved canvas and has reached the diagram limit
   const { data: diagramCount } = useQuery({
     queryKey: ['diagram-count', user?.id],
     queryFn: async () => {
@@ -164,7 +117,6 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
     onDiagramLimitReached: () => openUpgradeModal('Diagramas ilimitados'),
   });
 
-  // Extracted hooks
   const { darkMode, toggleDarkMode } = useThemeToggle();
   const { interactionMode, handleSetInteractionMode } = useInteractionMode();
   const { refreshing, handleRefreshDiagram, lastLoadedUpdatedAtRef } = useDiagramRefresh();
@@ -174,7 +126,6 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
   const overlaysRef = useRef<CanvasOverlaysHandle>(null);
 
   const { handleAddNode } = useAddNodeToCanvas(reactFlowWrapper);
-
   const { guides, onNodeDrag, onNodeDragStop } = useSnapGuides(nodes);
   const { broadcastChanges, collaborators } = useRealtimeCollab(shareToken || null, planLimits.realtimeCollabEnabled, user);
   const { saveStatus } = useAutoSave();
@@ -219,23 +170,25 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
     onConnectAction(connection);
   }, [onConnectAction, nodes]);
 
+  const handleAutoLayout = useCallback((engine: string, direction: string) => {
+    if (engine === 'elk') {
+      autoLayoutELK(direction as any).catch(() => toast({ title: t('canvas.layoutError'), variant: 'destructive' }));
+    } else {
+      autoLayout(direction as any);
+    }
+  }, [autoLayoutELK, autoLayout, t]);
+
   return (
     <div className="flex h-screen w-screen flex-col bg-background" onKeyDown={handleKeyDown} tabIndex={0} role="application" aria-label="Editor de diagramas de arquitetura">
       <header className="flex items-center justify-center gap-3 border-b bg-card/80 px-4 py-2 backdrop-blur-sm">
-        {!readOnly && (
-        <Toolbar
+        <DiagramToolbarStrip
+          readOnly={readOnly}
           onAddNode={handleAddNode}
           onDelete={deleteSelected}
           onClearCanvas={() => modalsRef.current?.openClearConfirm()}
           onUndo={undo}
           onRedo={redo}
-          onAutoLayout={(engine, direction) => {
-            if (engine === 'elk') {
-              autoLayoutELK(direction as any).catch(() => toast({ title: t('canvas.layoutError'), variant: 'destructive' }));
-            } else {
-              autoLayout(direction as any);
-            }
-          }}
+          onAutoLayout={handleAutoLayout}
           onExportPNG={handleExportPNG}
           onExportSVG={handleExportSVG}
           onExportMermaid={() => modalsRef.current?.openMermaid()}
@@ -248,37 +201,22 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
           allowedExportFormats={planLimits.allowedExportFormats}
           onUpgradeRequest={openUpgradeModal}
           actionsDisabled={toolbarLocked}
+          shareToken={shareToken}
+          diagramId={diagramId ?? null}
+          isCollaborator={isCollaborator}
+          user={user}
+          collaborators={collaborators}
+          saving={saving}
+          refreshing={refreshing}
+          onSave={handleSaveToCloud}
+          onRefresh={handleRefreshDiagram}
+          onSignOut={handleSignOutRequest}
+          onOpenBilling={() => setBillingOpen(true)}
+          onOpenAccount={() => setAccountOpen(true)}
+          onOpenMyDiagrams={() => setMyDiagramsOpen(true)}
+          onOpenShortcuts={() => modalsRef.current?.openShortcuts()}
+          plan={planLimits.plan as 'free' | 'pro' | 'team'}
         />
-        )}
-        {!readOnly && <WorkspaceContextSelector />}
-        {!readOnly && (
-          <>
-            <DiagramHeader
-              shareToken={shareToken}
-              diagramId={diagramId ?? null}
-              isCollaborator={isCollaborator}
-              user={user}
-              collaborators={collaborators}
-              saving={saving}
-              refreshing={refreshing}
-              onSave={handleSaveToCloud}
-              onRefresh={handleRefreshDiagram}
-              onSignOut={handleSignOutRequest}
-              onOpenBilling={() => setBillingOpen(true)}
-              onOpenAccount={() => setAccountOpen(true)}
-              onOpenMyDiagrams={() => setMyDiagramsOpen(true)}
-              plan={planLimits.plan}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => modalsRef.current?.openShortcuts()} aria-label={t('canvas.keyboardShortcuts')}>
-                  <Keyboard className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">{t('canvas.keyboardShortcutsBtn')}</TooltipContent>
-            </Tooltip>
-          </>
-        )}
       </header>
 
       <div className="relative flex-1" ref={reactFlowWrapper}>
@@ -305,7 +243,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
           selectionOnDrag={!readOnly && interactionMode === 'select'}
           panOnDrag={readOnly ? true : (interactionMode === 'select' ? [1, 2] : [0, 1, 2])}
           selectionMode={SelectionMode.Partial}
-          defaultEdgeOptions={{ type: 'editable', animated: true, style: { strokeWidth: 2 }, data: { waypoints: undefined } }}
+          defaultEdgeOptions={defaultEdgeOptions}
           proOptions={{ hideAttribution: true }}
         >
           <SnapGuideLines guides={guides} />
@@ -339,12 +277,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
         />
       )}
 
-      <UpgradeModal
-        open={upgradeModalOpen}
-        onOpenChange={setUpgradeModalOpen}
-        featureName={upgradeFeatureName}
-      />
-
+      <UpgradeModal open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen} featureName={upgradeFeatureName} />
       <BillingModal open={billingOpen} onOpenChange={setBillingOpen} />
       <AccountModal open={accountOpen} onOpenChange={setAccountOpen} />
       <MyDiagramsModal open={myDiagramsOpen} onOpenChange={setMyDiagramsOpen} />
