@@ -62,7 +62,7 @@ export default function AuthPage() {
       const msgMap: Record<string, string> = {
         'Invalid login credentials': t('auth.invalidCredentials'),
         'Email not confirmed': t('auth.emailNotConfirmed'),
-        'User already registered': t('auth.emailAlreadyUsed'),
+        
         'Signup requires a valid password': t('auth.passwordTooShort'),
         'Password should be at least 6 characters': t('auth.passwordTooShort'),
         'For security purposes, you can only request this once every 60 seconds': t('auth.rateLimited'),

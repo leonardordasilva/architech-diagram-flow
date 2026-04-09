@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface AdminGuardProps {
@@ -8,13 +9,11 @@ interface AdminGuardProps {
 
 export default function AdminGuard({ children }: AdminGuardProps) {
   const { user, loading } = useAuth();
+  const { isAdmin, isLoading } = useIsAdmin();
 
-  if (loading) return <LoadingSpinner />;
+  if (loading || isLoading) return <LoadingSpinner />;
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
-  const userEmail = user?.email?.trim().toLowerCase();
-
-  if (!user || !adminEmail || userEmail !== adminEmail) {
+  if (!user || !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
