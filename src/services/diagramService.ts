@@ -214,6 +214,10 @@ async function withConcurrencyLimit<T>(
 
   async function worker() {
     while (nextIndex < tasks.length) {
+      // SAFETY: nextIndex++ is atomic in the JS event loop —
+      // the read + increment happens in a single synchronous tick before any await.
+      // Do NOT refactor to separate read/increment across await boundaries.
+      // @ref PRD-0028 F6-T3
       const index = nextIndex++;
       try {
         const value = await tasks[index]();
