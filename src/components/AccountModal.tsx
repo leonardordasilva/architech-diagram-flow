@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useDiagramStore } from '@/store/diagramStore';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +31,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export default function AccountModal({ open, onOpenChange }: AccountModalProps) {
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -263,8 +265,8 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
               </Button>
             )}
 
-            {/* Admin access — only visible for admin email */}
-            {user?.email?.trim().toLowerCase() === import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase() && (
+            {/* Admin access — only visible for admin users */}
+            {isAdmin && (
               <Button
                 variant="outline"
                 className="w-full justify-start gap-2"

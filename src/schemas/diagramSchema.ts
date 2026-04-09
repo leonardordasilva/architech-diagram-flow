@@ -11,11 +11,25 @@ const EXTERNAL_CATEGORIES = [
   'API', 'CDN', 'Auth', 'Payment', 'Storage', 'Analytics', 'Other',
 ] as const;
 
+/**
+ * Schema for internal node items (database fields, API endpoints, etc.)
+ *
+ * Canonical formats:
+ *   - string: simple label
+ *   - { label: string; dbType: string }: database field with type
+ *
+ * Legacy formats (pre-2026 data) are normalized via transform.
+ */
 const InternalItemSchema = z.union([
   z.string().min(1),
-  z.object({ label: z.string(), dbType: z.string() }),
-  z.object({ id: z.string(), label: z.string() }).transform((obj) => obj.label),
-  z.object({ label: z.string() }).transform((obj) => obj.label),
+  z.object({
+    label: z.string(),
+    dbType: z.string().optional(),
+    id: z.string().optional(),
+  }).transform((obj) => {
+    if (obj.dbType) return { label: obj.label, dbType: obj.dbType };
+    return obj.label;
+  }),
 ]);
 
 export const NodeSchema = z.object({
