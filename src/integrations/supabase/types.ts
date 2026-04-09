@@ -79,6 +79,7 @@ export type Database = {
           node_count: number
           nodes: Json
           owner_id: string
+          revision_number: number
           share_token: string | null
           share_token_expires_at: string | null
           title: string
@@ -96,6 +97,7 @@ export type Database = {
           node_count?: number
           nodes?: Json
           owner_id: string
+          revision_number?: number
           share_token?: string | null
           share_token_expires_at?: string | null
           title?: string
@@ -113,6 +115,7 @@ export type Database = {
           node_count?: number
           nodes?: Json
           owner_id?: string
+          revision_number?: number
           share_token?: string | null
           share_token_expires_at?: string | null
           title?: string
@@ -572,6 +575,7 @@ export type Database = {
           node_count: number
           nodes: Json
           owner_id: string
+          revision_number: number
           share_token: string | null
           share_token_expires_at: string | null
           title: string
