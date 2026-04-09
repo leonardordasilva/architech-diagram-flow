@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/utils/getErrorMessage';
 import { Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface Props {
   open: boolean;
@@ -18,10 +19,15 @@ interface Props {
 export default function UpgradeModal({ open, onOpenChange, featureName, description, targetPlan = 'pro' }: Props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   async function handleCheckout(planId: string, cycle: BillingCycle) {
     if (planId === 'free') {
       onOpenChange(false);
+      return;
+    }
+    if (!termsAccepted) {
+      toast({ title: t('billing.acceptTerms.required', 'Aceite os termos para continuar.'), variant: 'destructive' });
       return;
     }
     setLoading(planId);
@@ -65,6 +71,27 @@ export default function UpgradeModal({ open, onOpenChange, featureName, descript
             preselectedPlan={targetPlan}
             hideHeader={true}
           />
+
+          {/* T4: Terms acceptance checkbox */}
+          <div className="flex items-start gap-2 text-xs text-muted-foreground mt-4 px-2">
+            <input
+              type="checkbox"
+              id="terms-accept-upgrade"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded border-border accent-primary shrink-0"
+            />
+            <label htmlFor="terms-accept-upgrade">
+              {t('billing.acceptTerms.prefix', 'Li e aceito os')}{' '}
+              <Link to="/terms" target="_blank" className="underline hover:text-foreground text-primary">
+                {t('footer.terms', 'Termos de Uso')}
+              </Link>{' '}
+              {t('billing.acceptTerms.and', 'e a')}{' '}
+              <Link to="/privacy" target="_blank" className="underline hover:text-foreground text-primary">
+                {t('footer.privacy', 'Política de Privacidade')}
+              </Link>
+            </label>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -1322,6 +1322,19 @@ export default function Landing() {
               <Heart size={13} color="#f97316" fill="#f97316" aria-label="love" />
               <span>{t('landing.footer.forArchitects')}</span>
             </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: '6px' }}>
+              <Link to="/terms" style={{ fontSize: '13px', color: '#475569', textDecoration: 'none', transition: 'color 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#475569')}>
+                {t('footer.terms', 'Termos de Uso')}
+              </Link>
+              <span style={{ color: '#334155', fontSize: '13px' }}>·</span>
+              <Link to="/privacy" style={{ fontSize: '13px', color: '#475569', textDecoration: 'none', transition: 'color 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#475569')}>
+                {t('footer.privacy', 'Política de Privacidade')}
+              </Link>
+            </div>
             <p style={{ fontSize: '13px', color: '#334155' }}>{t('landing.footer.copy')}</p>
           </div>
         </div>
