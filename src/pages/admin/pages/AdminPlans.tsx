@@ -67,15 +67,15 @@ export default function AdminPlans() {
           <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-muted-foreground">Max Diagramas</label>
-              <Input type="number" value={getVal(p.plan, 'max_diagrams') ?? ''} onChange={(e) => setVal(p.plan, 'max_diagrams', e.target.value ? Number(e.target.value) : null)} />
+              <Input type="number" value={String(getVal(p.plan, 'max_diagrams') ?? '')} onChange={(e) => setVal(p.plan, 'max_diagrams', e.target.value ? Number(e.target.value) : null)} />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Max Nodes</label>
-              <Input type="number" value={getVal(p.plan, 'max_nodes_per_diagram') ?? ''} onChange={(e) => setVal(p.plan, 'max_nodes_per_diagram', e.target.value ? Number(e.target.value) : null)} />
+              <Input type="number" value={String(getVal(p.plan, 'max_nodes_per_diagram') ?? '')} onChange={(e) => setVal(p.plan, 'max_nodes_per_diagram', e.target.value ? Number(e.target.value) : null)} />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Max Colaboradores</label>
-              <Input type="number" value={getVal(p.plan, 'max_collaborators_per_diagram') ?? ''} onChange={(e) => setVal(p.plan, 'max_collaborators_per_diagram', e.target.value ? Number(e.target.value) : null)} />
+              <Input type="number" value={String(getVal(p.plan, 'max_collaborators_per_diagram') ?? '')} onChange={(e) => setVal(p.plan, 'max_collaborators_per_diagram', e.target.value ? Number(e.target.value) : null)} />
             </div>
             <div className="col-span-full flex gap-2">
               <Button size="sm" disabled={!edits[p.plan] || updatePlanLimits.isPending} onClick={() => handleSave(p.plan)}>

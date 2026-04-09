@@ -9,7 +9,7 @@ const sections = [
   {
     label: 'Overview',
     items: [
-      { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+      { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true as const },
     ],
   },
   {
