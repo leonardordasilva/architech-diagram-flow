@@ -283,6 +283,31 @@ export default function AuthPage() {
 
         {/* Form */}
         <div key={view} className="auth-view">
+          {view === 'confirm-email' ? (
+            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '50%',
+                background: 'rgba(59,130,246,0.12)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Mail size={28} style={{ color: '#3b82f6' }} />
+              </div>
+              <p style={{ fontSize: '15px', color: '#e2e8f0', lineHeight: 1.6, margin: 0 }}>
+                {t('auth.signupConfirmDesc', { email })}
+              </p>
+              <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
+                {t('auth.signupConfirmHint')}
+              </p>
+              <button
+                type="button"
+                className="auth-btn"
+                style={{ marginTop: '8px' }}
+                onClick={() => { setView('login'); setPassword(''); }}
+              >
+                {t('auth.doLogin')}
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Email */}
             <div>
