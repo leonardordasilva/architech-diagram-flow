@@ -28,13 +28,17 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
   const [internalDbs, setInternalDbs] = useState<InternalDatabase[]>([]);
   const [internalSvcs, setInternalSvcs] = useState<string[]>([]);
 
+  // PRD-0028 F3-T2: Stable keys to detect external changes to databases/services
+  const dbKey = JSON.stringify(data?.internalDatabases || []);
+  const svcKey = JSON.stringify(data?.internalServices || []);
+
   useEffect(() => {
     if (data) {
       setLabel(data.label);
       setInternalDbs((data.internalDatabases || []).map(normalizeInternalDb));
       setInternalSvcs(data.internalServices || []);
     }
-  }, [nodeId, data?.label]);
+  }, [nodeId, data?.label, dbKey, svcKey]);
 
   if (!node || !data) return null;
 
@@ -46,16 +50,28 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
     );
   };
 
+  // PRD-0028 F3-T1: Commit label to store only on blur, not every keystroke
+  const commitLabel = () => {
+    const trimmed = label.trim();
+    if (trimmed && trimmed !== data.label) {
+      updateNode({ label: trimmed });
+    }
+  };
+
   const handleLabelChange = (value: string) => {
     setLabel(value);
-    updateNode({ label: value });
+    // Store update moved to onBlur — PRD-0028 F3-T1
+  };
+
+  // PRD-0028 F3-T1: Commit dbs to store on blur
+  const commitDbs = () => {
+    updateNode({ internalDatabases: internalDbs });
   };
 
   const handleDbLabelChange = (index: number, value: string) => {
     const updated = [...internalDbs];
     updated[index] = { ...updated[index], label: value };
     setInternalDbs(updated);
-    updateNode({ internalDatabases: updated });
   };
 
   const handleDbTypeChange = (index: number, value: string) => {
@@ -77,11 +93,15 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
     updateNode({ internalDatabases: updated });
   };
 
+  // PRD-0028 F3-T1: Commit services to store on blur
+  const commitSvcs = () => {
+    updateNode({ internalServices: internalSvcs });
+  };
+
   const handleSvcChange = (index: number, value: string) => {
     const updated = [...internalSvcs];
     updated[index] = value;
     setInternalSvcs(updated);
-    updateNode({ internalServices: updated });
   };
 
   const addSvc = () => {
