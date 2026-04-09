@@ -1,0 +1,321 @@
+# PRD-12 — Consolidação Final de Tipos e Melhorias Residuais
+
+**Projeto:** MicroFlow Architect
+**Documento:** PRD-12
+**Arquivo:** prd/PRD-12.md
+**Data:** 01/03/2026
+**Status:** Aprovado
+**Prioridade:** Baixa–Média
+**Autor:** Auditoria Técnica Automatizada — Ciclo 4
+**Versão:** 1.0
+
+---
+
+## 1. Contexto e Objetivo
+
+Este documento registra os apontamentos identificados na quarta
+rodada de auditoria técnica do repositório MicroFlow-Architect,
+realizada em 01/03/2026, imediatamente após a implementação do
+PRD-11. Dos 9 itens do PRD-11, 8 foram completamente resolvidos
+e 1 permanece como residual de design (A04).
+
+O projeto encontra-se em estado de maturidade técnica sólida:
+não há vulnerabilidades críticas, a API Key está inteiramente
+no servidor, o auto-save usa compressão gzip, os testes cobrem
+os módulos críticos e a Edge Function possui autenticação JWT,
+rate limiting com purga proativa, validação de entrada e fallback
+de modelos. Os 6 pontos deste PRD são todos de criticidade
+baixa a média e endereçam a consolidação final de tipos,
+documentação de dependências de segurança e micro-otimização
+de performance.
+
+---
+
+## 2. Resumo dos Apontamentos
+
+| ID          | Título resumido                                           | Criticidade | Categoria       |
+|-------------|-----------------------------------------------------------|-------------|-----------------|
+| R4-QUA-01   | DiagramNode/DiagramEdge divergem dos tipos Zod inferidos  | Média       | Qualidade       |
+| R4-QUA-02   | partialize usa cast `as unknown as DiagramStore`          | Baixa       | Qualidade       |
+| R4-PERF-01  | Conversão base64 final ainda itera elemento a elemento    | Baixa       | Performance     |
+| R4-SEC-01   | saveSharedDiagram sem documentação de dependência de RLS  | Média       | Segurança/Docs  |
+| R4-INF-01   | Migration com índice idx_ai_requests_user_created         | Baixa       | Infra           |
+| A04-residual| Casts `as unknown as DiagramNode[]/DiagramEdge[]`         | Média       | Qualidade       |
+
+---
+
+## 3. Detalhamento dos Apontamentos
+
+### 3.1 R4-QUA-01 — DiagramNode/DiagramEdge divergem dos tipos Zod inferidos
+
+**Arquivos afetados:**
+- `src/types/diagram.ts`
+- `src/schemas/diagramSchema.ts`
+- `src/services/diagramService.ts`
+
+**Situação atual:**
+
+`DiagramNode` é declarado como `Node<DiagramNodeData>` (interface
+manual) e `DiagramEdge` como `Edge<DiagramEdgeData>`. Em paralelo,
+`NodeSchema` e `EdgeSchema` em `diagramSchema.ts` definem
+estruturalmente os mesmos dados, mas TypeScript não consegue
+verificar que `z.infer<typeof NodeSchema>` é assignável a
+`DiagramNode` porque o `@xyflow/react` genérico `Node<T>` e o
+output do Zod com `.passthrough()` têm assinaturas ligeiramente
+diferentes nas propriedades opcionais (`selected`, `dragging`,
+`measured` etc.). Isso força o cast documentado em `toDiagramRecord`.
+
+**Causa raiz:**
+
+O problema tem duas dimensões. Primeiro, `DiagramNodeData` é uma
+interface manual com `[key: string]: unknown` (index signature)
+enquanto o output de `NodeSchema.shape.data.passthrough()` produz
+um tipo com as mesmas chaves mas sem o index signature, tornando
+os dois estruturalmente incompatíveis para assignment direto.
+Segundo, `Node<T>` do `@xyflow/react` inclui propriedades de
+estado de runtime (`selected`, `dragging`, `measured`, `width`,
+`height`) que não fazem parte do schema de persistência.
+
+**Correção esperada:**
+
+A abordagem recomendada é separar explicitamente o tipo de
+**persistência** (o que o Zod valida e o banco armazena) do tipo
+de **runtime** (o que o React Flow manipula). Para isso:
+
+1. Renomear o tipo atual `DiagramNode` para `DiagramNodeRuntime`
+   (ou manter como está para compatibilidade) e criar um tipo
+   de persistência derivado do Zod:
+
+```typescript
+// src/types/diagram.ts
+import type { z } from 'zod';
+import type { NodeSchema, EdgeSchema } from '@/schemas/diagramSchema';
+
+/** Tipo de persistência: o que é salvo no banco e validado pelo Zod */
+export type PersistedNode = z.infer<typeof NodeSchema>;
+export type PersistedEdge = z.infer<typeof EdgeSchema>;
+
+/** Tipo de runtime: o que o React Flow manipula em memória */
+export type DiagramNode = Node<DiagramNodeData>;
+export type DiagramEdge = Edge<DiagramEdgeData>;
+Copy
+Em toDiagramRecord, usar PersistedNode[] e PersistedEdge[] como tipos intermediários e aplicar uma conversão explícita e documentada somente nessa fronteira:
+Copyfunction toDiagramRecord(row: DiagramRow): DiagramRecord {
+  const nodesParsed = DbDiagramNodesSchema.safeParse(row.nodes ?? []);
+  const edgesParsed = DbDiagramEdgesSchema.safeParse(row.edges ?? []);
+  if (!nodesParsed.success) throw new Error('...');
+  if (!edgesParsed.success) throw new Error('...');
+
+  // Conversão explícita na fronteira persistência→runtime:
+  // PersistedNode é structurally compatible com DiagramNode
+  // salvo pelas propriedades de runtime (selected, dragging etc.)
+  // que o React Flow inicializa como undefined por padrão.
+  return {
+    ...
+    nodes: nodesParsed.data as DiagramNode[],  // cast simples, não double
+    edges: edgesParsed.data as DiagramEdge[],
+  };
+}
+Atualizar DiagramRecord para usar DiagramNode[] e DiagramEdge[] como tipos dos campos nodes e edges, consistente com o que diagramStore espera receber em loadDiagram.
+Critério de aceite:
+
+Zero ocorrências de as unknown as DiagramNode[] ou as unknown as DiagramEdge[] em qualquer arquivo.
+O cast residual, quando presente, usa apenas um nível (as DiagramNode[]), com comentário explicando a fronteira de persistência vs. runtime.
+tsc --noEmit passa sem erros.
+npm test passa sem falhas.
+3.2 R4-QUA-02 — partialize usa cast as unknown as DiagramStore
+Arquivo afetado: src/store/diagramStore.ts
+
+Situação atual:
+
+A opção partialize do temporal (zundo) retorna apenas o subconjunto { nodes, edges, diagramName } mas é forçada ao tipo DiagramStore completo via as unknown as DiagramStore. Isso ocorre porque a tipagem genérica do zundo exige que o retorno de partialize seja assignável ao tipo completo do store.
+
+Correção esperada:
+
+Declarar um tipo intermediário explícito para o slice de undo e usar uma asserção de tipo única e documentada com um comentário // zundo: partialize requires full store type; only nodes/edges/name are tracked:
+
+Copytype UndoSlice = Pick<DiagramStore, 'nodes' | 'edges' | 'diagramName'>;
+
+// Na opção temporal:
+partialize: (state): DiagramStore =>
+  ({
+    nodes: state.nodes,
+    edges: state.edges,
+    diagramName: state.diagramName,
+  } as unknown as DiagramStore), // zundo: partialize requires full store type
+A mudança é semântica — o cast continua existindo por limitação do zundo, mas agora está devidamente documentado e o tipo UndoSlice explicita a intenção, facilitando futuras revisões.
+
+Critério de aceite:
+
+O tipo UndoSlice existe e é usado para documentar o slice.
+O comentário explica a razão do cast para revisores futuros.
+tsc --noEmit passa sem erros.
+3.3 R4-PERF-01 — Conversão base64 final itera elemento a elemento
+Arquivo afetado: src/hooks/useAutoSave.ts, função compressString
+
+Situação atual:
+
+Após a correção do A06 (PRD-11), a etapa de coleta de chunks foi corrigida para O(n) usando Uint8Array pré-alocado. Porém a etapa final de conversão para base64 ainda usa:
+
+Copylet binary = '';
+for (let i = 0; i < merged.length; i++) {
+  binary += String.fromCharCode(merged[i]);
+}
+return btoa(binary);
+Para diagramas pequenos e médios isso é aceitável. Para arrays acima de ~100 KB (diagramas com 100+ nós), a criação de N strings intermediárias gera pressão de GC perceptível.
+
+Correção esperada:
+
+Processar em chunks de 8.192 bytes usando String.fromCharCode.apply, que é seguro para chunks deste tamanho e produz apenas ceil(N/8192) alocações intermediárias em vez de N:
+
+Copyconst CHUNK = 8192;
+let binary = '';
+for (let i = 0; i < merged.length; i += CHUNK) {
+  binary += String.fromCharCode.apply(
+    null,
+    Array.from(merged.subarray(i, i + CHUNK))
+  );
+}
+return btoa(binary);
+Critério de aceite:
+
+A função compressString não itera elemento a elemento para a conversão final.
+Os testes existentes de auto-save continuam passando.
+Auto-save de diagrama com 100 nós completa em menos de 150 ms (verificável via console.time em dev).
+3.4 R4-SEC-01 — saveSharedDiagram sem documentação de dependência de RLS
+Arquivo afetado: src/services/diagramService.ts, função saveSharedDiagram
+
+Situação atual:
+
+Copyexport async function saveSharedDiagram(
+  diagramId: string,
+  nodes: DiagramNode[],
+  edges: DiagramEdge[],
+): Promise<void> {
+  const updatePayload: TablesUpdate<'diagrams'> = { ... };
+  const { error } = await supabase
+    .from('diagrams')
+    .update(updatePayload)
+    .eq('id', diagramId);   // ← sem filtro owner_id
+  if (error) {
+    throw new Error('Você não tem permissão de edição neste diagrama.');
+  }
+}
+A função executa UPDATE filtrando apenas por id, sem verificar owner_id no lado cliente. A proteção depende exclusivamente da política RLS no Supabase. Se a política não estiver ativa ou for configurada incorretamente, qualquer usuário autenticado que conheça um diagramId pode sobrescrever o diagrama de outro usuário.
+
+Impacto: Médio. Em produção, a segurança real depende do banco, não do código. O risco é de regressão silenciosa caso as políticas sejam inadvertidamente alteradas.
+
+Correção esperada (duas ações complementares):
+
+Ação 1 — Comentário de contrato de segurança no código:
+
+Copy/**
+ * Salva alterações em um diagrama compartilhado.
+ *
+ * CONTRATO DE SEGURANÇA: esta função NÃO verifica owner_id no lado
+ * cliente intencionalmente. A autorização é delegada inteiramente
+ * à política RLS da tabela `diagrams` no Supabase, que deve garantir
+ * que somente colaboradores autorizados possam executar UPDATE.
+ *
+ * Política RLS esperada (tabela diagrams, operação UPDATE):
+ *   auth.uid() = owner_id  OR  share_token IS NOT NULL
+ *
+ * Nunca remova esta nota sem auditar as políticas RLS primeiro.
+ */
+export async function saveSharedDiagram(...) { ... }
+Ação 2 — Teste de contrato de segurança: Adicionar em diagramService.test.ts um teste que verifica que saveSharedDiagram não inclui .eq('owner_id', ...) em sua chamada, documentando que a proteção é deliberadamente delegada ao RLS:
+
+Copyit('saveSharedDiagram não filtra por owner_id (proteção delegada ao RLS)', async () => {
+  const chain = chainable();
+  vi.mocked(supabase.from).mockReturnValue(chain as never);
+  // A função deve completar sem chamar eq('owner_id', ...)
+  await expect(saveSharedDiagram('diag-1', [], [])).resolves.not.toThrow();
+  const eqCalls = (chain.eq as ReturnType<typeof vi.fn>).mock.calls;
+  const ownerIdCall = eqCalls.find((args) => args[0] === 'owner_id');
+  expect(ownerIdCall).toBeUndefined();
+});
+Critério de aceite:
+
+Comentário JSDoc de contrato de segurança presente em saveSharedDiagram.
+Teste de contrato adicionado e passando em npm test.
+npm run lint passa sem avisos no arquivo.
+3.5 R4-INF-01 — Migration com índice idx_ai_requests_user_created
+Pasta afetada: supabase/migrations/
+
+Situação atual:
+
+O PRD-11 (A02) especificava a criação de uma migration com o índice idx_ai_requests_user_created em (user_id, created_at) na tabela ai_requests. A lógica de purga proativa foi implementada na Edge Function, mas a migration com o índice não pôde ser verificada via arquivos do repositório.
+
+Sem o índice, as queries de rate-limit (SELECT COUNT(*) WHERE user_id = ? AND created_at > ?) executam full table scan em ai_requests, degradando progressivamente com o volume de dados mesmo após a purga.
+
+Correção esperada:
+
+Criar ou verificar a existência de uma migration SQL:
+
+Copy-- supabase/migrations/<timestamp>_add_ai_requests_index.sql
+
+-- Índice composto para otimizar queries de rate-limiting
+CREATE INDEX IF NOT EXISTS idx_ai_requests_user_created
+  ON ai_requests (user_id, created_at DESC);
+
+-- Documentação da política de retenção
+COMMENT ON TABLE ai_requests IS
+  'Registros de requisições de IA para rate limiting.
+   Política de retenção: registros com mais de 5 minutos são
+   purgados proativamente pela Edge Function generate-diagram.
+   O índice idx_ai_requests_user_created é crítico para
+   performance das queries de contagem.';
+Critério de aceite:
+
+Existe um arquivo de migration na pasta supabase/migrations/ contendo a criação do índice com IF NOT EXISTS.
+O comentário na tabela documenta a política de retenção.
+O README ou .env.example menciona a necessidade de aplicar migrations (supabase db push) após o deploy.
+3.6 A04-residual — Casts as unknown as DiagramNode[]/DiagramEdge[]
+Arquivo afetado: src/services/diagramService.ts, função toDiagramRecord
+
+Situação atual:
+
+Este item foi parcialmente endereçado no PRD-11 (marcado como ⚠️ Parcial). Os casts permanecem com um comentário técnico justificando o gap entre .passthrough() do Zod e a interface manual DiagramNode. Este apontamento é resolvido pela implementação do R4-QUA-01 acima — a separação dos tipos de persistência e runtime elimina a necessidade do double cast, reduzindo-o a um cast simples de fronteira documentado.
+
+Este item é dependente de R4-QUA-01 e não requer ação independente. Ao implementar R4-QUA-01, este apontamento é automaticamente resolvido.
+
+Critério de aceite: idêntico ao R4-QUA-01.
+
+4. Dependências entre Apontamentos
+O diagrama de dependência de implementação é:
+
+R4-QUA-01 ──resolves──► A04-residual
+R4-QUA-01 ──depende de── (nenhuma)
+R4-QUA-02 ──independente
+R4-PERF-01 ──independente
+R4-SEC-01 ──independente
+R4-INF-01 ──independente
+Por conta desta dependência, R4-QUA-01 deve ser implementado antes de verificar A04-residual como concluído.
+
+5. Ordem de Execução Recomendada
+Fase 1 — Consolidação de tipos (R4-QUA-01 + A04-residual): Implementar a separação PersistedNode/DiagramNode em src/types/diagram.ts e ajustar toDiagramRecord em src/services/diagramService.ts. Executar tsc --noEmit após cada arquivo modificado.
+
+Fase 2 — Documentação de segurança (R4-SEC-01): Adicionar o comentário JSDoc em saveSharedDiagram e o teste de contrato em diagramService.test.ts. Executar npm test para confirmar.
+
+Fase 3 — Qualidade e performance (R4-QUA-02 + R4-PERF-01): Adicionar o tipo UndoSlice em diagramStore.ts e refatorar o loop final de compressString em useAutoSave.ts.
+
+Fase 4 — Infraestrutura (R4-INF-01): Criar ou verificar a migration com o índice idx_ai_requests_user_created.
+
+6. Critérios de Aceite Globais
+Ao finalizar todas as fases, o repositório deve satisfazer simultaneamente:
+
+npm run build conclui sem erros ou warnings TypeScript.
+npm test executa 100% dos testes sem falhas.
+npm run lint retorna zero warnings nos arquivos modificados.
+Zero ocorrências de as unknown as DiagramNode[] ou as unknown as DiagramEdge[] em qualquer arquivo.
+saveSharedDiagram possui comentário JSDoc de contrato de segurança e teste de contrato associado.
+Existe migration com idx_ai_requests_user_created.
+tsc --noEmit passa sem erros.
+7. Fora do Escopo deste PRD
+Os seguintes itens estão explicitamente excluídos:
+
+Qualquer alteração no fluxo de autenticação ou UI.
+Novos recursos de diagramação ou exportação.
+Alterações no prompt da Edge Function ou nos modelos de IA.
+Configuração de pipeline CI/CD.
+Alterações em dependências de terceiros.

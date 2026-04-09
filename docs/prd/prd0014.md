@@ -1,0 +1,237 @@
+PRD-14 — MicroFlow-Architect Arquivo: prd/PRD-14.md Data: 05/03/2026 Status: Aprovado Itens: 13 (R5-SEC-01 a R5-FUNC-04) Prioridade geral: Média-baixa — nenhum item bloqueia produção, porém R5-SEC-02 e R5-FUNC-03 têm impacto funcional direto
+
+Contexto
+
+Este PRD endereça os 13 pontos identificados na reanálise pós-PRD-13, realizada em 05/03/2026. Todos os 19 itens do PRD-13 foram confirmados como implementados. Os novos apontamentos cobrem: robustez de autenticação nas Edge Functions, compatibilidade de browser no auto-save, comportamento de clearCanvas, tipagem residual com any e micro-otimizações de performance.
+
+Fase 1 — Segurança (R5-SEC-01, R5-SEC-02, R5-SEC-03)
+
+R5-SEC-01 — btoa(String.fromCharCode(...array)) inseguro para arrays grandes
+
+Arquivo: supabase/functions/diagram-crypto/index.ts
+
+A função encrypt usa spread operator (...new Uint8Array(encrypted)) na chamada de String.fromCharCode. Embora o IV seja de 12 bytes (seguro), o ciphertext pode ser arbitrariamente grande, causando RangeError: Maximum call stack size exceeded. Substituir por conversão iterativa:
+
+Copy// Antes (inseguro para buffers grandes):
+ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+
+// Depois (seguro para qualquer tamanho):
+function uint8ToBase64(buf: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+  return btoa(binary);
+}
+// usar: ciphertext: uint8ToBase64(new Uint8Array(encrypted))
+// idem para o IV:       iv: uint8ToBase64(iv)
+A mesma função auxiliar uint8ToBase64 deve ser extraída e reutilizada nos dois pontos da função encrypt.
+
+R5-SEC-02 — getClaims não existe no @supabase/supabase-js v2
+
+Arquivos: supabase/functions/diagram-crypto/index.ts e supabase/functions/generate-diagram/index.ts
+
+Ambas as funções chamam supabaseClient.auth.getClaims(token), método inexistente na versão 2 do SDK Supabase. O método correto para validar um token no lado servidor é supabaseClient.auth.getUser() (sem argumento; o token já está injetado via global.headers). Substituir em ambos os arquivos:
+
+Copy// Antes:
+const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+if (claimsError || !claimsData?.claims) { /* ... */ }
+const userId = (claimsData.claims as Record<string, string>).sub;
+
+// Depois:
+const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+if (userError || !userData?.user) { /* retornar 401 */ }
+const userId = userData.user.id;
+Isso elimina a dependência de um método inexistente e garante que a autenticação funcione corretamente em produção.
+
+R5-SEC-03 — Dados legados do localStorage não validados com Zod
+
+Arquivo: src/hooks/useAutoSave.ts
+
+O fallback legacy em getAutoSave faz JSON.parse(raw) as any sem validação. Adicionar validação com um schema Zod mínimo antes de retornar:
+
+Copy// Adicionar schema interno (pode ser um subset de AutoSaveData):
+const LegacyAutoSaveSchema = z.object({
+  nodes: z.array(z.unknown()),
+  edges: z.array(z.unknown()),
+  title: z.string().optional(),
+  savedAt: z.string().optional(),
+});
+
+// No fallback legacy:
+const parsed = LegacyAutoSaveSchema.safeParse(rawData);
+if (!parsed.success) return null;
+return { ...parsed.data, version: '2' } as AutoSaveData;
+Fase 2 — Funcionalidades (R5-FUNC-02, R5-FUNC-03, R5-FUNC-04)
+
+R5-FUNC-02 — CompressionStream sem verificação de suporte do browser
+
+Arquivo: src/hooks/useAutoSave.ts
+
+CompressionStream não está disponível em Safari < 16.4 e alguns WebViews. Adicionar verificação de disponibilidade e fallback para armazenamento não comprimido:
+
+Copyconst SUPPORTS_COMPRESSION = typeof CompressionStream !== 'undefined';
+
+async function compressString(input: string): Promise<string> {
+  if (!SUPPORTS_COMPRESSION) return btoa(unescape(encodeURIComponent(input)));
+  // ... lógica atual de gzip
+}
+
+async function decompressString(base64: string): Promise<string> {
+  if (!SUPPORTS_COMPRESSION) return decodeURIComponent(escape(atob(base64)));
+  // ... lógica atual de gunzip
+}
+O getAutoSave também deve tentar o fallback de decompressão sem CompressionStream quando decompressString falhar.
+
+R5-FUNC-03 — clearCanvas não reseta currentDiagramId
+
+Arquivo: src/store/diagramStore.ts
+
+O método clearCanvas limpa nodes, edges e isCollaborator, mas omite currentDiagramId. Isso causa que um Ctrl+S após limpar o canvas sobrescreva o diagrama anterior. Corrigir:
+
+Copy// Antes:
+clearCanvas: () => set({ nodes: [], edges: [], isCollaborator: false }),
+
+// Depois:
+clearCanvas: () => set({ nodes: [], edges: [], isCollaborator: false, currentDiagramId: undefined }),
+Atualizar o teste existente de clearCanvas em src/store/diagramStore.test.ts para verificar que currentDiagramId fica undefined após clearCanvas.
+
+R5-FUNC-04 — RecoveryBanner não valida dados com Zod antes de restaurar
+
+Arquivo: src/components/RecoveryBanner.tsx
+
+O handleRestore carrega savedData.nodes e savedData.edges diretamente no store. Adicionar validação com DbDiagramNodesSchema e DbDiagramEdgesSchema antes de restaurar:
+
+Copyimport { DbDiagramNodesSchema, DbDiagramEdgesSchema } from '@/schemas/diagramSchema';
+import type { DiagramNode, DiagramEdge } from '@/types/diagram';
+
+const handleRestore = () => {
+  const nodesParsed = DbDiagramNodesSchema.safeParse(savedData.nodes);
+  const edgesParsed = DbDiagramEdgesSchema.safeParse(savedData.edges);
+  if (!nodesParsed.success || !edgesParsed.success) {
+    toast({ title: 'Dados do diagrama salvo estão corrompidos.', variant: 'destructive' });
+    clearAutoSave();
+    setDismissed(true);
+    return;
+  }
+  const { loadDiagram, setDiagramName } = useDiagramStore.getState();
+  loadDiagram(nodesParsed.data as DiagramNode[], edgesParsed.data as DiagramEdge[]);
+  if (savedData.title) setDiagramName(savedData.title);
+  setDismissed(true);
+};
+Fase 3 — Qualidade de Tipos (R5-QUA-01, R5-QUA-02, R5-QUA-03, R5-QUA-04, R5-QUA-05, R5-QUA-06)
+
+R5-QUA-01 — Cast as DiagramNode[] em toDiagramRecord sem comentário
+
+Arquivo: src/services/diagramService.ts
+
+O cast é necessário pois PersistedNode (Zod-inferred) não é estruturalmente idêntico a DiagramNode (Node<DiagramNodeData> do React Flow). Adicionar comentário inline explicativo:
+
+Copy// Cast necessário: PersistedNode (Zod) não é assignable a DiagramNode (Node<DiagramNodeData>)
+// pois @xyflow/react adiciona campos internos ao tipo Node<T> ausentes no schema Zod.
+nodes: nodesParsed.data as DiagramNode[],
+edges: edgesParsed.data as DiagramEdge[],
+R5-QUA-02 — partialize não usa UndoSlice como tipo de retorno explícito
+
+Arquivo: src/store/diagramStore.ts
+
+Ajustar a assinatura de partialize para que o retorno seja UndoSlice, deixando explícito o que é rastreado, com o cast interno documentado:
+
+Copypartialize: (state): UndoSlice => ({
+  nodes: state.nodes,
+  edges: state.edges,
+  diagramName: state.diagramName,
+} as unknown as UndoSlice), // zundo exige DiagramStore; UndoSlice é o subconjunto rastreado
+R5-QUA-03 — handleNodeClick e handleNodeContextMenu tipados como any
+
+Arquivo: src/components/DiagramCanvas.tsx
+
+Substituir any pelo tipo correto importado de @xyflow/react:
+
+Copyimport type { Node } from '@xyflow/react';
+
+const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+  setSelectedNodeId(node.id);
+}, []);
+
+const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+  event.preventDefault();
+  if (node.type === 'database' || node.type === 'external') return;
+  const nodeData = node.data as DiagramNodeData;
+  setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id, nodeLabel: nodeData.label });
+}, []);
+R5-QUA-04 — handleConnect tipado como any
+
+Arquivo: src/components/DiagramCanvas.tsx
+
+Connection já está importado. Substituir o parâmetro:
+
+Copyconst handleConnect = useCallback((connection: Connection) => {
+  // ...
+}, [onConnectAction, nodes]);
+R5-QUA-05 — diagramStore.test.ts usa (node.data as any) repetidamente
+
+Arquivo: src/store/diagramStore.test.ts
+
+Substituir todos os node.data as any por node.data as DiagramNodeData importando o tipo:
+
+Copyimport type { DiagramNodeData } from '@/types/diagram';
+// usar: (node.data as DiagramNodeData).label, etc.
+R5-QUA-06 — getAutoSave fallback usa as any (coberto por R5-SEC-03)
+
+Este item é resolvido em conjunto com R5-SEC-03 pela adição do LegacyAutoSaveSchema. Não requer ação adicional.
+
+Fase 4 — Performance (R5-PERF-01, R5-PERF-02)
+
+R5-PERF-01 — setNodes recalcula cores de todas as arestas em cada chamada
+
+Arquivo: src/store/diagramStore.ts
+
+Adicionar verificação de mudança efetiva antes de mapear arestas. Comparar o subType do nó atual com o armazenado na aresta (edge.data.sourceNodeSubType):
+
+CopysetNodes: (nodes) => {
+  const safeNodes = Array.isArray(nodes) ? nodes : [];
+  set((state) => {
+    const nodeMap = new Map(safeNodes.map((n) => [n.id, n]));
+    // Verificar se houve mudança de subType em algum nó
+    const hasSubTypeChange = state.edges.some((edge) => {
+      const sourceNode = nodeMap.get(edge.source);
+      if (!sourceNode) return false;
+      return (sourceNode.data as DiagramNodeData | undefined)?.subType !== edge.data?.sourceNodeSubType;
+    });
+    if (!hasSubTypeChange) return { nodes: safeNodes }; // skip edge map
+    const updatedEdges = state.edges.map(/* lógica existente */);
+    return { nodes: safeNodes, edges: updatedEdges };
+  });
+},
+R5-PERF-02 — MiniMap cria colorMap inline a cada render
+
+Arquivo: src/components/DiagramCanvas.tsx
+
+Extrair o mapa de cores para uma constante de módulo:
+
+Copy// Fora do componente, no topo do arquivo:
+const MINIMAP_NODE_COLORS: Record<string, string> = {
+  service:  'hsl(217, 91%, 60%)',
+  database: 'hsl(142, 71%, 45%)',
+  queue:    'hsl(45, 93%, 47%)',
+  external: 'hsl(220, 9%, 46%)',
+};
+
+// Dentro do JSX:
+<MiniMap
+  className="!bg-card !border-border"
+  nodeColor={(node) => MINIMAP_NODE_COLORS[node.type || ''] || '#888'}
+/>
+Critérios de aceitação globais
+
+Após todas as fases, os seguintes critérios devem ser atendidos:
+
+tsc --noEmit sem erros — zero any não comentado em arquivos não-test
+npm test passando — incluindo novos casos de teste para clearCanvas e RecoveryBanner
+npm run build sem warnings de tipo
+npm run lint sem erros
+Autenticação nas Edge Functions funcionando via getUser() (não getClaims)
+clearCanvas + addNode + Ctrl+S cria diagrama novo (não atualiza o anterior)
+RecoveryBanner exibe toast de erro quando dados do localStorage estão corrompidos
+auto-save funciona em Safari (com ou sem CompressionStream)
+Zero as any em DiagramCanvas.tsx, diagramStore.ts e useAutoSave.ts
+Comentários inline presentes em todos os casts as DiagramNode[] e as DiagramEdge[]

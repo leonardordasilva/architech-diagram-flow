@@ -1,0 +1,700 @@
+# PRD-13 — Segurança, Performance, Qualidade e Funcionalidades
+
+**Projeto:** MicroFlow Architect
+**Documento:** PRD-13
+**Arquivo:** prd/PRD-13.md
+**Data:** 05/03/2026
+**Status:** Aprovado
+**Prioridade:** Alta (SEC) / Média (PERF, FUNC) / Baixa (QUA)
+**Autor:** Auditoria Técnica Automatizada — Ciclo 5
+**Versão:** 1.0
+
+---
+
+## 1. Contexto e Objetivo
+
+Este documento consolida os 19 apontamentos identificados na
+quinta rodada de auditoria técnica, realizada em 05/03/2026,
+após análise completa de segurança, performance, otimização,
+boas práticas e funcionalidades. Esta é a primeira auditoria
+a cobrir os arquivos `cryptoService.ts` e
+`supabase/functions/diagram-crypto/index.ts`, que foram
+implementados entre os ciclos PRD-12 e PRD-13 e representam
+uma evolução arquitetural significativa — os dados dos
+diagramas agora são criptografados com AES-GCM 256 antes de
+serem persistidos no banco.
+
+Os itens estão organizados em quatro categorias com ordem de
+execução recomendada: Segurança primeiro, seguida de
+Funcionalidades que bloqueiam UX, Performance e por fim
+Qualidade de código.
+
+---
+
+## 2. Resumo dos Apontamentos
+
+| ID        | Título resumido                                          | Criticidade | Categoria     |
+|-----------|----------------------------------------------------------|-------------|---------------|
+| SEC-01    | CORS da diagram-crypto usa wildcard *                    | Alta        | Segurança     |
+| SEC-02    | Payload de presença Realtime sem validação Zod           | Média       | Segurança     |
+| SEC-03    | Nós/arestas remotos de broadcast aplicados sem Zod       | Média       | Segurança     |
+| SEC-04    | handleImport aceita any[] contornando validação          | Baixa       | Segurança     |
+| PERF-01   | loadUserDiagrams sem limitação de concorrência           | Média       | Performance   |
+| PERF-02   | onConnect lê nodes por closure externa ao set()          | Baixa       | Performance   |
+| PERF-03   | exportJSON inclui propriedades de runtime do React Flow  | Baixa       | Performance   |
+| PERF-04   | manualChunks com nome de chunk enganoso para layout      | Baixa       | Performance   |
+| QUA-01    | AutoSaveData usa any[] para nodes e edges                | Baixa       | Qualidade     |
+| QUA-02    | payload.new tipado como any em useRealtimeCollab         | Baixa       | Qualidade     |
+| QUA-03    | PersistedNode/PersistedEdge exportados mas não usados    | Baixa       | Qualidade     |
+| QUA-04    | getNodeColor/getDbColor no store em vez de utilitário    | Baixa       | Qualidade     |
+| QUA-05    | onNodesChange/onEdgesChange sem comparação de referência | Baixa       | Qualidade     |
+| QUA-06    | handleImport passa any[] diretamente para loadDiagram    | Baixa       | Qualidade     |
+| FUNC-01   | interactionMode não persistido em localStorage           | Baixa       | Funcionalidade|
+| FUNC-02   | Cor de aresta não atualiza quando subType do nó muda     | Média       | Funcionalidade|
+| FUNC-03   | Validação canConnect duplicada — store e canvas          | Baixa       | Funcionalidade|
+| FUNC-04   | deleteSelected não limpa selectedNodeId no canvas        | Baixa       | Funcionalidade|
+| FUNC-05   | handleRefreshDiagram não atualiza diagramName            | Baixa       | Funcionalidade|
+
+---
+
+## 3. Detalhamento dos Apontamentos
+
+### 3.1 SEC-01 — CORS da Edge Function diagram-crypto usa wildcard `*`
+
+**Arquivo afetado:**
+`supabase/functions/diagram-crypto/index.ts`
+
+**Situação atual:**
+```typescript
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  ...
+};
+Copy
+A Edge Function diagram-crypto, que lida com criptografia e descriptografia de dados sensíveis dos usuários, aceita requisições de qualquer origem. Qualquer site pode invocar esta função com um token Bearer válido obtido por phishing ou XSS, resultando em descriptografia não autorizada de diagramas.
+
+Correção esperada: Substituir o CORS estático por dinâmico baseado em allowlist, idêntico ao padrão já adotado em generate-diagram:
+
+Copyconst ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",").map((o) => o.trim()).filter(Boolean);
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowed =
+    ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin);
+  return {
+    "Access-Control-Allow-Origin": allowed
+      ? origin
+      : ALLOWED_ORIGINS[0] || "",
+    "Access-Control-Allow-Headers": "authorization, ...",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+Remover a constante corsHeaders estática e usar getCorsHeaders(req) em todos os pontos de retorno da função, passando o objeto req disponível no handler.
+
+Critério de aceite:
+
+A Edge Function diagram-crypto não retorna Access-Control-Allow-Origin: * em nenhuma resposta.
+Origens não listadas em ALLOWED_ORIGINS recebem o primeiro valor da lista ou string vazia.
+npm test e build passam sem erros.
+3.2 SEC-02 — Payload de presença Realtime sem validação Zod
+Arquivo afetado: src/hooks/useRealtimeCollab.ts, callback .on('presence', { event: 'sync' }, ...)
+
+Situação atual:
+
+CopyObject.values(state).forEach((presences: any[]) => {
+  presences.forEach((p) => {
+    if (p.userId && !seen.has(p.userId)) {
+      users.push({ userId: p.userId, email: p.email || '', ... });
+    }
+  });
+});
+O payload de presença é processado como any[] sem validação. Um cliente malicioso conectado ao mesmo canal pode injetar campos arbitrários — em particular, email com conteúdo que seja interpretado como HTML ou script ao ser renderizado na UI de avatares de colaboradores.
+
+Correção esperada: Definir e aplicar um schema Zod mínimo antes de acessar os campos:
+
+Copyimport { z } from 'zod';
+
+const PresenceItemSchema = z.object({
+  userId: z.string().min(1).max(64),
+  email: z.string().email().max(254).optional(),
+  online_at: z.string().optional(),
+}).passthrough();
+
+// No callback:
+Object.values(state).forEach((presences: unknown[]) => {
+  presences.forEach((p) => {
+    const parsed = PresenceItemSchema.safeParse(p);
+    if (!parsed.success) return;
+    const item = parsed.data;
+    if (item.userId && !seen.has(item.userId)) {
+      seen.add(item.userId);
+      users.push({
+        userId: item.userId,
+        email: item.email || '',
+        color: AVATAR_COLORS[users.length % AVATAR_COLORS.length],
+      });
+    }
+  });
+});
+Critério de aceite:
+
+O callback de presença não acessa propriedades via any.
+Itens com userId inválido ou ausente são descartados.
+Um item com email contendo <script> não chega ao array collaborators retornado pelo hook.
+npm test passa sem falhas.
+3.3 SEC-03 — Nós e arestas do broadcast aplicados sem validação Zod
+Arquivo afetado: src/hooks/useRealtimeCollab.ts, callback .on('broadcast', { event: 'diagram_updated' }, ...)
+
+Situação atual:
+
+Copyconst { nodes, edges } = payload.payload as {
+  nodes: DiagramNode[];
+  edges: DiagramEdge[];
+};
+store.setNodes(nodes);
+store.setEdges(edges);
+Os dados recebidos via broadcast de colaboração são aplicados ao store diretamente, sem passar por DbDiagramNodesSchema ou DbDiagramEdgesSchema. Um colaborador pode enviar nós com tipos inválidos, labels com conteúdo malicioso ou estruturas que causem erros na renderização do React Flow.
+
+Correção esperada: Validar com safeParse antes de aplicar ao store:
+
+Copyimport {
+  DbDiagramNodesSchema,
+  DbDiagramEdgesSchema,
+} from '@/schemas/diagramSchema';
+
+const rawPayload = payload.payload as {
+  nodes: unknown;
+  edges: unknown;
+};
+
+const nodesParsed = DbDiagramNodesSchema.safeParse(rawPayload.nodes);
+const edgesParsed = DbDiagramEdgesSchema.safeParse(rawPayload.edges);
+
+if (!nodesParsed.success || !edgesParsed.success) {
+  console.warn('[RealtimeCollab] Broadcast payload inválido ignorado');
+  return;
+}
+
+store.setNodes(nodesParsed.data as DiagramNode[]);
+store.setEdges(edgesParsed.data as DiagramEdge[]);
+Critério de aceite:
+
+Broadcast com nodes contendo type: "malicious" não altera o store.
+Broadcast com edges malformados é descartado com warn.
+npm test passa sem falhas.
+3.4 SEC-04 — handleImport aceita any[] contornando validação
+Arquivo afetado: src/components/DiagramCanvas.tsx, handleImport
+
+Situação atual:
+
+Copyconst handleImport = useCallback(
+  (data: { nodes: any[]; edges: any[]; name?: string }) => {
+    loadDiagram(data.nodes, data.edges);
+    ...
+  },
+  [loadDiagram, setDiagramName]
+);
+O tipo any[] no contrato do callback permite que chamadas diretas a handleImport (em testes, ou outros componentes) contornem a validação Zod feita em ImportJSONModal. O store loadDiagram espera DiagramNode[], mas sem tipagem forte TypeScript não detecta incompatibilidades.
+
+Correção esperada: Substituir any[] por ImportDiagramInput do schema:
+
+Copyimport type { ImportDiagramInput } from '@/schemas/diagramSchema';
+
+const handleImport = useCallback(
+  (data: ImportDiagramInput) => {
+    loadDiagram(data.nodes as DiagramNode[], data.edges as DiagramEdge[]);
+    if (data.name) setDiagramName(data.name);
+    lastLoadedUpdatedAtRef.current = null;
+    toast({ title: 'Diagrama importado com sucesso!' });
+  },
+  [loadDiagram, setDiagramName]
+);
+Ajustar o tipo esperado em ImportJSONModal e em qualquer outro local que chame onImport para usar ImportDiagramInput.
+
+Critério de aceite:
+
+O callback handleImport não usa any em sua assinatura.
+tsc --noEmit passa sem erros.
+npm test passa sem falhas.
+3.5 PERF-01 — loadUserDiagrams sem limitação de concorrência
+Arquivo afetado: src/services/diagramService.ts, loadUserDiagrams
+
+Situação atual:
+
+Copyconst settled = await Promise.allSettled(
+  (data || []).map((row) => toDiagramRecord(row)),
+);
+Com até 12 diagramas por página e toDiagramRecord agora sendo assíncrona (por conta da descriptografia via Edge Function), isso dispara até 12 chamadas simultâneas à Edge Function diagram-crypto. Cada chamada envolve autenticação JWT, importação de chave AES e uma operação criptográfica. Em conexões lentas ou planos com cold start na Edge Function, isso pode causar timeouts ou degradação perceptível na página /my-diagrams.
+
+Correção esperada: Implementar um semáforo de concorrência simples inline, limitando a 4 descriptografias simultâneas:
+
+Copyasync function withConcurrencyLimit<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number,
+): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = [];
+  let index = 0;
+
+  async function runNext(): Promise<void> {
+    const i = index++;
+    if (i >= tasks.length) return;
+    try {
+      results[i] = { status: 'fulfilled', value: await tasks[i]() };
+    } catch (reason) {
+      results[i] = { status: 'rejected', reason };
+    }
+    await runNext();
+  }
+
+  const workers = Array.from(
+    { length: Math.min(limit, tasks.length) },
+    runNext,
+  );
+  await Promise.all(workers);
+  return results;
+}
+
+// Uso em loadUserDiagrams:
+const tasks = (data || []).map((row) => () => toDiagramRecord(row));
+const settled = await withConcurrencyLimit(tasks, 4);
+Critério de aceite:
+
+loadUserDiagrams nunca dispara mais de 4 chamadas simultâneas a diagram-crypto.
+O comportamento de tolerância a falhas (itens corrompidos ignorados com console.warn) é mantido.
+npm test passa sem falhas com o mock do cryptoService.
+3.6 PERF-02 — onConnect lê nodes por closure externa ao set()
+Arquivo afetado: src/store/diagramStore.ts, onConnect
+
+Situação atual:
+
+CopyonConnect: (connection) => {
+  const { nodes } = get();
+  const sourceNode = nodes.find((n) => n.id === connection.source);
+  // ...
+  set((state) => {
+    const result = addEdge(..., state.edges) as DiagramEdge[];
+    // ...
+  });
+},
+nodes é lido via get() antes do set(). Em cenários de alta frequência (arrastar e soltar rápido, colaboração em tempo real), o array nodes capturado pode estar levemente desatualizado em relação ao estado que o set() vai receber. A correção consiste em ler nodes dentro do callback do set() para garantir uso do snapshot mais recente:
+
+CopyonConnect: (connection) => {
+  set((state) => {
+    const sourceNode = state.nodes.find(
+      (n) => n.id === connection.source,
+    );
+    const targetNode = state.nodes.find(
+      (n) => n.id === connection.target,
+    );
+    // ... lógica de cor usando sourceNode e targetNode ...
+    const result = addEdge(..., state.edges) as DiagramEdge[];
+    if (!Array.isArray(result)) {
+      console.error('[Store] addEdge returned non-array');
+      return { edges: state.edges };
+    }
+    return { edges: result };
+  });
+},
+Critério de aceite:
+
+onConnect não chama get() para acessar nodes.
+O comportamento de coloração de arestas é mantido.
+npm test (suíte de onConnect) passa sem falhas.
+3.7 PERF-03 — exportJSON inclui propriedades de runtime do React Flow
+Arquivo afetado: src/store/diagramStore.ts, exportJSON
+
+Situação atual:
+
+CopyexportJSON: () => {
+  const { diagramName, nodes, edges } = get();
+  return JSON.stringify({ name: diagramName, nodes, edges }, null, 2);
+},
+O React Flow adiciona propriedades de estado de runtime aos nós (selected, dragging, measured, width, height, positionAbsolute) que não fazem parte do modelo de dados do diagrama. Essas propriedades inflam o JSON exportado e o payload enviado ao banco de dados durante o save, aumentando o tamanho dos dados armazenados desnecessariamente.
+
+Correção esperada: Projetar apenas os campos de persistência antes de serializar:
+
+CopyexportJSON: () => {
+  const { diagramName, nodes, edges } = get();
+  const persistNodes = nodes.map(({ id, type, position, data }) => ({
+    id,
+    type,
+    position,
+    data,
+  }));
+  const persistEdges = edges.map(
+    ({ id, source, target, type, animated, style, markerEnd, data, label }) => ({
+      id,
+      source,
+      target,
+      type,
+      animated,
+      style,
+      markerEnd,
+      data,
+      label,
+    }),
+  );
+  return JSON.stringify(
+    { name: diagramName, nodes: persistNodes, edges: persistEdges },
+    null,
+    2,
+  );
+},
+Critério de aceite:
+
+O JSON exportado não contém selected, dragging, measured, width, height ou positionAbsolute.
+O JSON importado de volta reconstrói o diagrama corretamente (teste de round-trip).
+npm test (exportJSON) passa sem falhas.
+3.8 PERF-04 — Nome do chunk de layout enganoso no vite.config.ts
+Arquivo afetado: vite.config.ts
+
+Situação atual:
+
+CopymanualChunks: {
+  'layout-engines': ['dagre'],
+  ...
+}
+O chunk layout-engines lista apenas dagre, mas o nome sugere que elkjs também estaria nele. elkjs é carregado corretamente de forma lazy via import('elkjs'), mas um desenvolvedor que olhe o config pode pensar que elkjs está incluído no chunk estático, podendo acidentalmente mover o import para estático no futuro.
+
+Correção esperada: Renomear o chunk para dagre-layout e adicionar comentário explicativo:
+
+CopymanualChunks: {
+  'react-flow':   ['@xyflow/react'],
+  'dagre-layout': ['dagre'],          // elkjs é carregado dinamicamente (lazy)
+  'export-utils': ['html-to-image'],
+  'supabase':     ['@supabase/supabase-js'],
+},
+Critério de aceite:
+
+O chunk layout-engines não existe mais no output do build.
+O chunk dagre-layout aparece no output de npm run build.
+elkjs permanece como chunk lazy (não incluído nos chunks estáticos).
+3.9 QUA-01 — AutoSaveData usa any[] para nodes e edges
+Arquivo afetado: src/hooks/useAutoSave.ts
+
+Situação atual:
+
+Copyexport interface AutoSaveData {
+  nodes: any[];
+  edges: any[];
+  title: string;
+  savedAt: string;
+  version: '2';
+}
+Correção esperada: Tipar com os tipos de persistência disponíveis:
+
+Copyimport type { DiagramNode, DiagramEdge } from '@/types/diagram';
+
+export interface AutoSaveData {
+  nodes: DiagramNode[];
+  edges: DiagramEdge[];
+  title: string;
+  savedAt: string;
+  version: '2';
+}
+Critério de aceite:
+
+AutoSaveData não usa any em nenhum campo.
+tsc --noEmit passa sem erros.
+3.10 QUA-02 — payload.new tipado como any em useRealtimeCollab
+Arquivo afetado: src/hooks/useRealtimeCollab.ts, callback postgres_changes
+
+Situação atual:
+
+Copyconst newRecord = payload.new as any;
+Correção esperada: Declarar interface local para o payload esperado:
+
+Copyinterface DiagramUpdatePayload {
+  id: string;
+  title?: string;
+  nodes: unknown;
+  edges: unknown;
+  updated_at?: string;
+}
+
+const newRecord = payload.new as DiagramUpdatePayload;
+Todos os acessos a newRecord.nodes, newRecord.edges, newRecord.title e newRecord.updated_at passam a ser verificados pelo compilador.
+
+Critério de aceite:
+
+Nenhuma ocorrência de payload.new as any no arquivo.
+tsc --noEmit passa sem erros.
+3.11 QUA-03 — PersistedNode/PersistedEdge exportados mas não usados
+Arquivo afetado: src/types/diagram.ts, src/services/cryptoService.ts
+
+Situação atual: PersistedNode e PersistedEdge são exportados mas nunca importados. Com a existência do cryptoService, esses tipos são naturalmente o contrato de entrada e saída da camada de criptografia.
+
+Correção esperada: Usar PersistedNode[] e PersistedEdge[] como tipos dos parâmetros e retornos de encryptDiagramData e decryptDiagramData:
+
+Copy// cryptoService.ts
+import type { PersistedNode, PersistedEdge } from '@/types/diagram';
+
+export async function encryptDiagramData(
+  nodes: PersistedNode[],
+  edges: PersistedEdge[],
+): Promise<{ nodes: EncryptedEnvelope; edges: EncryptedEnvelope }>
+
+export async function decryptDiagramData(
+  nodes: unknown,
+  edges: unknown,
+): Promise<{ nodes: PersistedNode[]; edges: PersistedEdge[] }>
+Critério de aceite:
+
+PersistedNode e PersistedEdge são referenciados em pelo menos um arquivo de produção além de diagram.ts.
+tsc --noEmit passa sem erros.
+3.12 QUA-04 — getNodeColor e getDbColor importados no store
+Arquivo afetado: src/store/diagramStore.ts
+
+Situação atual: A função getNodeColor é definida no próprio store e getDbColor é importada de @/constants/databaseColors. Ambas são utilitários de apresentação (cor de UI), não de estado, e não deveriam estar acoplados ao store de dados.
+
+Correção esperada: Mover getNodeColor para src/utils/nodeColors.ts (ou src/constants/nodeColors.ts) e importá-la no store apenas para uso em onConnect. Assim, qualquer componente de UI que precise das cores de nós pode importar de um local único sem depender do store.
+
+Copy// src/utils/nodeColors.ts
+import { getDbColor } from '@/constants/databaseColors';
+import type { NodeType } from '@/types/diagram';
+
+export function getNodeColor(type?: NodeType, subType?: string): string {
+  switch (type) {
+    case 'service':  return 'hsl(217, 91%, 60%)';
+    case 'database': return getDbColor(subType);
+    case 'queue':    return 'hsl(157, 52%, 49%)';
+    case 'external': return 'hsl(220, 9%, 46%)';
+    default:         return '#888';
+  }
+}
+Critério de aceite:
+
+getNodeColor não está mais definida em diagramStore.ts.
+EditableEdge.tsx e diagramStore.ts importam de @/utils/nodeColors.ts.
+tsc --noEmit e npm test passam sem erros.
+3.13 QUA-05 — onNodesChange/onEdgesChange sem comparação de referência
+Arquivo afetado: src/store/diagramStore.ts
+
+Situação atual:
+
+CopyonNodesChange: (changes) => {
+  if (!changes || changes.length === 0) return;
+  set({ nodes: applyNodeChanges(changes, get().nodes) as DiagramNode[] });
+},
+A comparação de referência if (updated !== nodes) set(...) foi removida. applyNodeChanges do @xyflow/react retorna a mesma referência quando não há mudanças reais, mas a chamada set() é feita incondicionalmente, forçando uma comparação de igualdade pelo Zustand a cada evento do React Flow.
+
+Correção esperada: Restaurar a comparação de referência antes do set:
+
+CopyonNodesChange: (changes) => {
+  if (!changes || changes.length === 0) return;
+  const current = get().nodes;
+  const updated = applyNodeChanges(changes, current) as DiagramNode[];
+  if (updated !== current) set({ nodes: updated });
+},
+
+onEdgesChange: (changes) => {
+  if (!changes || changes.length === 0) return;
+  const current = get().edges;
+  const updated = applyEdgeChanges(changes, current) as DiagramEdge[];
+  if (updated !== current) set({ edges: updated });
+},
+Critério de aceite:
+
+Os handlers não chamam set() quando applyNodeChanges retorna a mesma referência.
+npm test (diagramStore) passa sem falhas.
+3.14 QUA-06 — handleImport passa any[] para loadDiagram
+Arquivo afetado: src/components/DiagramCanvas.tsx
+
+Este item é resolvido automaticamente pela implementação de SEC-04. Ao tipar handleImport com ImportDiagramInput, o cast para DiagramNode[] e DiagramEdge[] passa a ser explícito e documentado. Não requer ação independente.
+
+Critério de aceite: idêntico ao SEC-04.
+
+3.15 FUNC-01 — interactionMode não persistido em localStorage
+Arquivo afetado: src/components/DiagramCanvas.tsx
+
+Situação atual:
+
+Copyconst [interactionMode, setInteractionMode] =
+  useState<'pan' | 'select'>('pan');
+A preferência de modo de interação é reiniciada a cada sessão. Usuários que preferem o modo select precisam reconfigurar após cada login.
+
+Correção esperada:
+
+Copyconst [interactionMode, setInteractionMode] = useState<
+  'pan' | 'select'
+>(() => {
+  const saved = localStorage.getItem('microflow_interaction_mode');
+  return saved === 'select' ? 'select' : 'pan';
+});
+
+// No toggle:
+const handleSetInteractionMode = useCallback(
+  (mode: 'pan' | 'select') => {
+    setInteractionMode(mode);
+    localStorage.setItem('microflow_interaction_mode', mode);
+  },
+  [],
+);
+Substituir as chamadas setInteractionMode(...) pelo novo handleSetInteractionMode(...) nos botões do canvas.
+
+Critério de aceite:
+
+Ao recarregar a página, o modo de interação anterior é restaurado.
+A chave microflow_interaction_mode é gravada em localStorage na mudança.
+3.16 FUNC-02 — Cor de aresta não atualiza quando subType do nó muda
+Arquivo afetado: src/store/diagramStore.ts, onConnect e setNodes
+
+Situação atual: A cor da aresta é calculada no momento da conexão com getNodeColor(sourceType, sourceSubType) e armazenada em edge.data.sourceNodeSubType. Se o usuário alterar o subType de um nó via NodePropertiesPanel (por exemplo, trocar Oracle por Redis), as arestas conectadas mantêm a cor antiga.
+
+Correção esperada: Em setNodes, após atualizar o array de nós, atualizar as arestas que têm data.sourceNodeType correspondendo ao nó alterado:
+
+CopysetNodes: (nodes) => {
+  const safeNodes = Array.isArray(nodes) ? nodes : [];
+  set((state) => {
+    const updatedEdges = state.edges.map((edge) => {
+      const sourceNode = safeNodes.find((n) => n.id === edge.source);
+      if (!sourceNode) return edge;
+      const newSubType = (sourceNode.data as DiagramNodeData).subType;
+      const oldSubType = (edge.data as any)?.sourceNodeSubType;
+      if (newSubType === oldSubType) return edge;
+      const newColor = getNodeColor(
+        sourceNode.type as NodeType,
+        newSubType,
+      );
+      return {
+        ...edge,
+        markerEnd: {
+          ...(edge.markerEnd as object),
+          color: newColor,
+        },
+        data: {
+          ...edge.data,
+          sourceNodeSubType: newSubType,
+        },
+      };
+    });
+    return { nodes: safeNodes, edges: updatedEdges };
+  });
+},
+Critério de aceite:
+
+Ao trocar o subType de um nó database de Oracle para Redis, todas as arestas originadas nesse nó atualizam sua cor imediatamente.
+npm test (setNodes) passa sem falhas.
+3.17 FUNC-03 — Validação canConnect duplicada no store e no canvas
+Arquivo afetado: src/store/diagramStore.ts e src/components/DiagramCanvas.tsx
+
+Situação atual: A validação canConnect ocorre em handleConnect no DiagramCanvas e não existe no onConnect do store. Se onConnect for chamado diretamente (em testes ou outros componentes), conexões inválidas podem ser criadas.
+
+Correção esperada: Importar e aplicar canConnect dentro do onConnect do store como camada interna de defesa:
+
+Copyimport { canConnect } from '@/utils/connectionRules';
+
+onConnect: (connection) => {
+  set((state) => {
+    const sourceNode = state.nodes.find(
+      (n) => n.id === connection.source,
+    );
+    const targetNode = state.nodes.find(
+      (n) => n.id === connection.target,
+    );
+    const srcType = (sourceNode?.type ?? 'service') as NodeType;
+    const tgtType = (targetNode?.type ?? 'service') as NodeType;
+
+    // Defense-in-depth: também validado no DiagramCanvas
+    if (!canConnect(srcType, tgtType)) {
+      console.warn(
+        `[Store] Conexão bloqueada: ${srcType} → ${tgtType}`,
+      );
+      return { edges: state.edges };
+    }
+
+    // ... restante da lógica de criação de aresta ...
+  });
+},
+Manter a validação no DiagramCanvas para exibir o toast de erro ao usuário. A validação no store é apenas defense-in-depth.
+
+Critério de aceite:
+
+Chamar store.onConnect diretamente com tipos incompatíveis não cria a aresta.
+Novo teste em diagramStore.test.ts: 'onConnect bloqueia conexão database→queue'.
+npm test passa sem falhas.
+3.18 FUNC-04 — deleteSelected não limpa selectedNodeId
+Arquivo afetado: src/components/DiagramCanvas.tsx, handleKeyDown
+
+Situação atual:
+
+Copyif (e.key === 'Delete') deleteSelected();
+Após a deleção, selectedNodeId aponta para um ID que não existe mais no store. O NodePropertiesPanel tenta buscar o nó no store e pode renderizar estado vazio ou lançar erros.
+
+Correção esperada:
+
+Copyif (e.key === 'Delete') {
+  deleteSelected();
+  setSelectedNodeId(null);
+}
+Adicionalmente, usar um useEffect reativo para garantir que selectedNodeId seja limpo quando o nó correspondente desaparecer do store:
+
+CopyuseEffect(() => {
+  if (selectedNodeId && !nodes.find((n) => n.id === selectedNodeId)) {
+    setSelectedNodeId(null);
+  }
+}, [nodes, selectedNodeId]);
+Critério de aceite:
+
+Pressionar Delete com um nó selecionado fecha o NodePropertiesPanel.
+selectedNodeId retorna null após a deleção.
+3.19 FUNC-05 — handleRefreshDiagram não atualiza diagramName
+Arquivo afetado: src/components/DiagramCanvas.tsx, handleRefreshDiagram
+
+Situação atual:
+
+CopyloadDiagram(record.nodes, record.edges);
+lastLoadedUpdatedAtRef.current = record.updated_at;
+toast({ title: 'Diagrama atualizado com sucesso!' });
+record.title não é aplicado ao store. Se o diagrama foi renomeado em outra sessão ou por outro colaborador, o título exibido fica desatualizado.
+
+Correção esperada:
+
+Copytemporal.pause();
+loadDiagram(record.nodes, record.edges);
+if (record.title && record.title !== diagramName) {
+  setDiagramName(record.title);
+}
+temporal.resume();
+lastLoadedUpdatedAtRef.current = record.updated_at;
+toast({ title: 'Diagrama atualizado com sucesso!' });
+Critério de aceite:
+
+Após o refresh, diagramName no store reflete o título atual do banco.
+O undo/redo não captura a atualização remota (está dentro do temporal.pause()/resume()).
+4. Dependências entre Apontamentos
+SEC-04  ──resolves──► QUA-06   (mesmo item)
+QUA-04  ──depende de── (nenhuma, mas EditableEdge já importa getDbColor)
+FUNC-02 ──depende de── QUA-04  (setNodes precisa de getNodeColor do utilitário)
+PERF-02 ──depende de── (nenhuma)
+FUNC-03 ──depende de── PERF-02 (onConnect refatorado)
+5. Ordem de Execução Recomendada
+Fase 1 — Segurança (SEC-01 a SEC-04): Executar em ordem. SEC-01 é independente (Edge Function). SEC-02 e SEC-03 modificam o mesmo hook (useRealtimeCollab), portanto implementar juntos. SEC-04 / QUA-06 são o mesmo item — implementar uma única vez. Rodar npm test ao final da fase.
+
+Fase 2 — Funcionalidades críticas de UX (FUNC-04, FUNC-05): Itens simples e independentes. Implementar e verificar manualmente no browser antes de prosseguir.
+
+Fase 3 — Qualidade de código (QUA-04, QUA-01, QUA-02, QUA-03, QUA-05): Implementar QUA-04 primeiro (move getNodeColor), pois FUNC-02 depende do utilitário criado. Em seguida os demais em qualquer ordem. Rodar tsc --noEmit após cada arquivo.
+
+Fase 4 — Funcionalidades e performance restantes (FUNC-01, FUNC-02, FUNC-03, PERF-01, PERF-02, PERF-03, PERF-04): Implementar PERF-02 antes de FUNC-03 (ambos afetam onConnect). PERF-01 é isolado no diagramService. PERF-03 e PERF-04 são independentes. Rodar npm run build e npm test ao final da fase.
+
+6. Critérios de Aceite Globais
+Ao finalizar todas as fases:
+
+npm run build conclui sem erros ou warnings de TypeScript.
+npm test executa 100% dos testes sem falhas.
+npm run lint retorna zero warnings nos arquivos modificados.
+tsc --noEmit passa sem erros em todo o projeto.
+A Edge Function diagram-crypto não retorna Access-Control-Allow-Origin: *.
+Broadcasts de colaboração com payload inválido são descartados sem crashar o canvas.
+O JSON exportado não contém propriedades de runtime do React Flow (selected, dragging, measured).
+Chamar store.onConnect com tipos incompatíveis não cria a aresta.
+Pressionar Delete com nó selecionado fecha o NodePropertiesPanel.
+O refresh de diagrama atualiza o título exibido.
+7. Fora do Escopo deste PRD
+Novos tipos de nó ou protocolos de aresta.
+Alterações no prompt da Edge Function generate-diagram.
+Mudanças no fluxo de autenticação ou reset de senha.
+Configuração de pipeline CI/CD.
+Migração de banco de dados (além da migration já existente).

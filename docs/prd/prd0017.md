@@ -1,0 +1,1075 @@
+# PRD-17 — Correção dos Riscos Remanescentes da Auditoria v4
+
+**Projeto:** MicroFlow Architect  
+**Documento:** PRD-17  
+**Arquivo:** prd/prd0017.md  
+**Data:** 20/03/2026  
+**Status:** Aprovado  
+**Prioridade geral:** Média (R1) / Baixa (R2–R7)  
+**Autor:** Auditoria Técnica Externa — Score 89/100  
+**Versão:** 1.0  
+
+---
+
+## 1. Contexto e Objetivo
+
+Este documento consolida os 7 riscos remanescentes identificados na
+auditoria técnica v4 de 20/03/2026 (Score: 89/100, classificação
+Enterprise-ready), e define as correções necessárias para elevar o
+projeto ao topo da faixa Enterprise-ready (~96/100).
+
+O PRD-16 resolveu com sucesso todos os riscos de alta criticidade e a
+maioria dos riscos de média/baixa. Os itens remanescentes são
+exclusivamente de severidade média e baixa, focados em cobertura de
+testes, refinamento de segurança e preparação para expansão.
+
+**Premissas do cliente incorporadas (mantidas de PRDs anteriores):**
+- Time de 1 pessoa com workflow de vibe coding
+- CI/CD e observabilidade dispensados
+- Estrutura de dados dos diagramas é final e estável
+- Supabase é a infraestrutura definitiva
+- PRDs são artefatos de trabalho necessários no repositório
+
+---
+
+## 2. Resumo dos Riscos Remanescentes
+
+| ID  | Título resumido                                              | Criticidade | Pilar                     |
+|-----|--------------------------------------------------------------|-------------|---------------------------|
+| R1  | Cobertura de testes limitada a 1 arquivo                     | **Média**   | Arquitetura & Estrutura   |
+| R2  | Descriptografia via HTTP round-trip em listagens             | Baixa       | Performance & Requisições |
+| R3  | Sem purge de registros soft-deleted antigos                  | Baixa       | Banco & Escalabilidade    |
+| R4  | `style-src 'unsafe-inline'` no CSP                           | Baixa       | Segurança & Sessão        |
+| R5  | Save manual sem debounce temporal efetivo                    | Baixa       | Segurança & Sessão        |
+| R6  | Ausência de i18n                                             | Baixa       | Preparação p/ Crescimento |
+| R7  | Sem landing page / onboarding                                | Baixa       | Preparação p/ Crescimento |
+
+---
+
+## 3. Detalhamento dos Apontamentos
+
+### Fase 1 — Prioridade Média (impacto direto na confiabilidade)
+
+---
+
+### 3.1 R1 — Cobertura de testes unitários limitada a 1 arquivo
+
+**Arquivos afetados:**
+- Criar: `src/utils/connectionRules.test.ts`
+- Criar: `src/schemas/diagramSchema.test.ts`
+- Criar: `src/store/diagramStore.test.ts`
+- Criar: `src/hooks/useSnapGuides.test.ts`
+
+**Situação atual:**
+
+Existe apenas `src/hooks/useAutoSave.test.ts` com 6 testes cobrindo o hook de auto-save. Nenhum service, store, schema ou utilitário possui teste unitário. No workflow de vibe coding, o agente de IA pode modificar `connectionRules`, `diagramStore`, `diagramSchema` ou `computeSnap` e introduzir regressões sem rede de segurança.
+
+**Impacto no score:** +3 pontos (pilar Arquitetura & Estrutura)
+
+**Correção esperada:**
+
+---
+
+**Arquivo 1 — `src/utils/connectionRules.test.ts`:**
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { canConnect, connectionErrorMessage } from './connectionRules';
+
+describe('canConnect', () => {
+  // Conexões permitidas
+  it('service → service é permitido', () => {
+    expect(canConnect('service', 'service')).toBe(true);
+  });
+
+  it('service → database é permitido', () => {
+    expect(canConnect('service', 'database')).toBe(true);
+  });
+
+  it('service → queue é permitido', () => {
+    expect(canConnect('service', 'queue')).toBe(true);
+  });
+
+  it('service → external é permitido', () => {
+    expect(canConnect('service', 'external')).toBe(true);
+  });
+
+  it('queue → service é permitido', () => {
+    expect(canConnect('queue', 'service')).toBe(true);
+  });
+
+  it('database → service é permitido', () => {
+    expect(canConnect('database', 'service')).toBe(true);
+  });
+
+  it('external → service é permitido', () => {
+    expect(canConnect('external', 'service')).toBe(true);
+  });
+
+  // Conexões bloqueadas
+  it('database → database é bloqueado', () => {
+    expect(canConnect('database', 'database')).toBe(false);
+  });
+
+  it('database → queue é bloqueado', () => {
+    expect(canConnect('database', 'queue')).toBe(false);
+  });
+
+  it('queue → queue é bloqueado', () => {
+    expect(canConnect('queue', 'queue')).toBe(false);
+  });
+
+  it('queue → database é bloqueado', () => {
+    expect(canConnect('queue', 'database')).toBe(false);
+  });
+
+  it('queue → external é bloqueado', () => {
+    expect(canConnect('queue', 'external')).toBe(false);
+  });
+
+  it('external → external é bloqueado', () => {
+    expect(canConnect('external', 'external')).toBe(false);
+  });
+
+  it('external → database é bloqueado', () => {
+    expect(canConnect('external', 'database')).toBe(false);
+  });
+
+  it('external → queue é bloqueado', () => {
+    expect(canConnect('external', 'queue')).toBe(false);
+  });
+
+  it('database → external é bloqueado', () => {
+    expect(canConnect('database', 'external')).toBe(false);
+  });
+});
+
+describe('connectionErrorMessage', () => {
+  it('retorna mensagem localizada para database → queue', () => {
+    const msg = connectionErrorMessage('database', 'queue');
+    expect(msg).toBeTruthy();
+    expect(typeof msg).toBe('string');
+    expect(msg.length).toBeGreaterThan(10);
+  });
+
+  it('retorna mensagem localizada para external → database', () => {
+    const msg = connectionErrorMessage('external', 'database');
+    expect(msg).toBeTruthy();
+    expect(typeof msg).toBe('string');
+  });
+});
+```
+
+---
+
+**Arquivo 2 — `src/schemas/diagramSchema.test.ts`:**
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { NodeSchema, EdgeSchema, ImportDiagramSchema } from './diagramSchema';
+
+describe('NodeSchema', () => {
+  it('valida nó válido do tipo service', () => {
+    const result = NodeSchema.safeParse({
+      id: 'node_1',
+      type: 'service',
+      position: { x: 100, y: 200 },
+      data: { label: 'Auth Service', type: 'service' },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejeita nó com id vazio', () => {
+    const result = NodeSchema.safeParse({
+      id: '',
+      type: 'service',
+      position: { x: 0, y: 0 },
+      data: { label: 'Test', type: 'service' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejeita nó com tipo inválido', () => {
+    const result = NodeSchema.safeParse({
+      id: 'node_1',
+      type: 'invalid_type',
+      position: { x: 0, y: 0 },
+      data: { label: 'Test', type: 'invalid_type' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('aceita nó do tipo database com subType', () => {
+    const result = NodeSchema.safeParse({
+      id: 'node_1',
+      type: 'database',
+      position: { x: 50, y: 75 },
+      data: { label: 'Redis', type: 'database', subType: 'Redis' },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('aceita nó do tipo external com externalCategory', () => {
+    const result = NodeSchema.safeParse({
+      id: 'node_1',
+      type: 'external',
+      position: { x: 0, y: 0 },
+      data: { label: 'Stripe', type: 'external', externalCategory: 'Payment' },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('aceita nó com campos extras via passthrough', () => {
+    const result = NodeSchema.safeParse({
+      id: 'node_1',
+      type: 'database',
+      position: { x: 0, y: 0 },
+      data: { label: 'Oracle', type: 'database', subType: 'Oracle' },
+      selected: true,
+      dragging: false,
+      measured: { width: 180, height: 80 },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('EdgeSchema', () => {
+  it('valida aresta válida mínima', () => {
+    const result = EdgeSchema.safeParse({
+      id: 'edge_1',
+      source: 'node_1',
+      target: 'node_2',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('valida aresta com protocolo', () => {
+    const result = EdgeSchema.safeParse({
+      id: 'edge_1',
+      source: 'node_1',
+      target: 'node_2',
+      protocol: 'REST',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejeita aresta com source vazio', () => {
+    const result = EdgeSchema.safeParse({
+      id: 'edge_1',
+      source: '',
+      target: 'node_2',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejeita aresta com target vazio', () => {
+    const result = EdgeSchema.safeParse({
+      id: 'edge_1',
+      source: 'node_1',
+      target: '',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('ImportDiagramSchema', () => {
+  it('rejeita diagrama com array de nós vazio', () => {
+    const result = ImportDiagramSchema.safeParse({
+      nodes: [],
+      edges: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('aceita diagrama válido com nome', () => {
+    const result = ImportDiagramSchema.safeParse({
+      name: 'Meu Diagrama',
+      nodes: [{
+        id: 'n1',
+        type: 'service',
+        position: { x: 0, y: 0 },
+        data: { label: 'Svc', type: 'service' },
+      }],
+      edges: [],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe('Meu Diagrama');
+    }
+  });
+
+  it('aceita diagrama válido sem nome', () => {
+    const result = ImportDiagramSchema.safeParse({
+      nodes: [{
+        id: 'n1',
+        type: 'queue',
+        position: { x: 10, y: 20 },
+        data: { label: 'RabbitMQ', type: 'queue' },
+      }],
+      edges: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('aceita diagrama com nós e arestas', () => {
+    const result = ImportDiagramSchema.safeParse({
+      nodes: [
+        { id: 'n1', type: 'service', position: { x: 0, y: 0 }, data: { label: 'A', type: 'service' } },
+        { id: 'n2', type: 'database', position: { x: 200, y: 0 }, data: { label: 'B', type: 'database' } },
+      ],
+      edges: [
+        { id: 'e1', source: 'n1', target: 'n2' },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+```
+
+---
+
+**Arquivo 3 — `src/store/diagramStore.test.ts`:**
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useDiagramStore } from './diagramStore';
+import type { DiagramNode, DiagramNodeData } from '@/types/diagram';
+
+function createTestNode(
+  id: string,
+  type: 'service' | 'database' | 'queue' | 'external' = 'service',
+  overrides?: Partial<DiagramNode>,
+): DiagramNode {
+  return {
+    id,
+    type,
+    position: { x: 0, y: 0 },
+    data: {
+      label: `Test ${id}`,
+      type,
+      internalDatabases: [],
+      internalServices: [],
+    } as DiagramNodeData,
+    ...overrides,
+  } as DiagramNode;
+}
+
+describe('diagramStore', () => {
+  beforeEach(() => {
+    const store = useDiagramStore.getState();
+    store.clearCanvas();
+    store.setDiagramName('Novo Diagrama');
+    store.setCurrentDiagramId(undefined);
+  });
+
+  describe('addNode', () => {
+    it('adiciona nó do tipo service com label padrão', () => {
+      useDiagramStore.getState().addNode('service');
+      const nodes = useDiagramStore.getState().nodes;
+      expect(nodes).toHaveLength(1);
+      expect(nodes[0].type).toBe('service');
+      expect((nodes[0].data as DiagramNodeData).label).toBe('Microserviço');
+    });
+
+    it('adiciona nó do tipo database com subType como label', () => {
+      useDiagramStore.getState().addNode('database', 'Redis');
+      const nodes = useDiagramStore.getState().nodes;
+      expect(nodes).toHaveLength(1);
+      expect((nodes[0].data as DiagramNodeData).label).toBe('Redis');
+    });
+
+    it('adiciona nó do tipo queue com subType como label', () => {
+      useDiagramStore.getState().addNode('queue', 'RabbitMQ');
+      const nodes = useDiagramStore.getState().nodes;
+      expect((nodes[0].data as DiagramNodeData).label).toBe('RabbitMQ');
+    });
+
+    it('adiciona nó do tipo external com subType como label', () => {
+      useDiagramStore.getState().addNode('external', 'GraphQL');
+      const nodes = useDiagramStore.getState().nodes;
+      expect((nodes[0].data as DiagramNodeData).label).toBe('GraphQL');
+    });
+
+    it('adiciona nó na posição especificada', () => {
+      useDiagramStore.getState().addNode('service', undefined, { x: 500, y: 300 });
+      const node = useDiagramStore.getState().nodes[0];
+      expect(node.position).toEqual({ x: 500, y: 300 });
+    });
+
+    it('gera ids únicos para múltiplos nós', () => {
+      const store = useDiagramStore.getState();
+      store.addNode('service');
+      store.addNode('service');
+      const nodes = useDiagramStore.getState().nodes;
+      expect(nodes).toHaveLength(2);
+      expect(nodes[0].id).not.toBe(nodes[1].id);
+    });
+  });
+
+  describe('deleteSelected', () => {
+    it('remove nós selecionados', () => {
+      const store = useDiagramStore.getState();
+      store.setNodes([
+        createTestNode('n1', 'service', { selected: true }),
+        createTestNode('n2', 'service', { selected: false }),
+        createTestNode('n3', 'database', { selected: true }),
+      ]);
+
+      store.deleteSelected();
+
+      const state = useDiagramStore.getState();
+      expect(state.nodes).toHaveLength(1);
+      expect(state.nodes[0].id).toBe('n2');
+    });
+
+    it('remove arestas conectadas a nós selecionados', () => {
+      const store = useDiagramStore.getState();
+      store.setNodes([
+        createTestNode('n1', 'service', { selected: true }),
+        createTestNode('n2', 'service', { selected: false }),
+        createTestNode('n3', 'database', { selected: false }),
+      ]);
+      store.setEdges([
+        { id: 'e1', source: 'n1', target: 'n2', type: 'editable' },
+        { id: 'e2', source: 'n2', target: 'n3', type: 'editable' },
+      ] as any);
+
+      store.deleteSelected();
+
+      const state = useDiagramStore.getState();
+      expect(state.edges).toHaveLength(1);
+      expect(state.edges[0].id).toBe('e2');
+    });
+
+    it('remove arestas selecionadas', () => {
+      const store = useDiagramStore.getState();
+      store.setNodes([
+        createTestNode('n1'),
+        createTestNode('n2'),
+      ]);
+      store.setEdges([
+        { id: 'e1', source: 'n1', target: 'n2', type: 'editable', selected: true },
+      ] as any);
+
+      store.deleteSelected();
+
+      expect(useDiagramStore.getState().edges).toHaveLength(0);
+    });
+
+    it('não faz nada quando nada está selecionado', () => {
+      const store = useDiagramStore.getState();
+      store.setNodes([createTestNode('n1'), createTestNode('n2')]);
+
+      store.deleteSelected();
+
+      expect(useDiagramStore.getState().nodes).toHaveLength(2);
+    });
+  });
+
+  describe('clearCanvas', () => {
+    it('limpa nodes, edges, isCollaborator e currentDiagramId', () => {
+      const store = useDiagramStore.getState();
+      store.addNode('service');
+      store.setCurrentDiagramId('test-id');
+      store.setIsCollaborator(true);
+
+      store.clearCanvas();
+
+      const state = useDiagramStore.getState();
+      expect(state.nodes).toHaveLength(0);
+      expect(state.edges).toHaveLength(0);
+      expect(state.currentDiagramId).toBeUndefined();
+      expect(state.isCollaborator).toBe(false);
+    });
+  });
+
+  describe('loadDiagram', () => {
+    it('substitui nodes e edges existentes', () => {
+      const store = useDiagramStore.getState();
+      store.addNode('service');
+
+      const newNodes = [createTestNode('imported_1'), createTestNode('imported_2')];
+      store.loadDiagram(newNodes, []);
+
+      const state = useDiagramStore.getState();
+      expect(state.nodes).toHaveLength(2);
+      expect(state.nodes[0].id).toBe('imported_1');
+    });
+
+    it('trata null como array vazio', () => {
+      const store = useDiagramStore.getState();
+      store.loadDiagram(null as any, undefined as any);
+
+      const state = useDiagramStore.getState();
+      expect(state.nodes).toHaveLength(0);
+      expect(state.edges).toHaveLength(0);
+    });
+
+    it('reseta isCollaborator para false', () => {
+      const store = useDiagramStore.getState();
+      store.setIsCollaborator(true);
+      store.loadDiagram([], []);
+      expect(useDiagramStore.getState().isCollaborator).toBe(false);
+    });
+  });
+
+  describe('exportJSON', () => {
+    it('exporta apenas campos essenciais, sem propriedades de runtime', () => {
+      const store = useDiagramStore.getState();
+      store.setNodes([
+        createTestNode('n1', 'service', {
+          selected: true,
+          dragging: true,
+          measured: { width: 180, height: 80 },
+        } as any),
+      ]);
+      store.setDiagramName('Test Export');
+
+      const json = store.exportJSON();
+      const parsed = JSON.parse(json);
+
+      expect(parsed.name).toBe('Test Export');
+      expect(parsed.nodes[0]).not.toHaveProperty('selected');
+      expect(parsed.nodes[0]).not.toHaveProperty('dragging');
+      expect(parsed.nodes[0]).not.toHaveProperty('measured');
+      expect(parsed.nodes[0]).toHaveProperty('id');
+      expect(parsed.nodes[0]).toHaveProperty('type');
+      expect(parsed.nodes[0]).toHaveProperty('position');
+      expect(parsed.nodes[0]).toHaveProperty('data');
+    });
+
+    it('gera JSON válido parseável', () => {
+      const store = useDiagramStore.getState();
+      store.addNode('service');
+      const json = store.exportJSON();
+      expect(() => JSON.parse(json)).not.toThrow();
+    });
+  });
+
+  describe('setDiagramName', () => {
+    it('atualiza o nome do diagrama', () => {
+      useDiagramStore.getState().setDiagramName('Arquitetura v2');
+      expect(useDiagramStore.getState().diagramName).toBe('Arquitetura v2');
+    });
+  });
+
+  describe('setNodes', () => {
+    it('trata input não-array com segurança', () => {
+      useDiagramStore.getState().setNodes(null as any);
+      expect(useDiagramStore.getState().nodes).toEqual([]);
+    });
+  });
+
+  describe('setEdges', () => {
+    it('trata input não-array com segurança', () => {
+      useDiagramStore.getState().setEdges(undefined as any);
+      expect(useDiagramStore.getState().edges).toEqual([]);
+    });
+  });
+});
+```
+
+---
+
+**Arquivo 4 — `src/hooks/useSnapGuides.test.ts`:**
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { computeSnap } from './useSnapGuides';
+import type { Node } from '@xyflow/react';
+
+function createNode(id: string, x: number, y: number, w = 160, h = 80): Node {
+  return {
+    id,
+    type: 'service',
+    position: { x, y },
+    data: {},
+    measured: { width: w, height: h },
+  } as Node;
+}
+
+describe('computeSnap', () => {
+  it('retorna null quando não há nós para alinhar', () => {
+    const dragged = createNode('d', 100, 100);
+    const result = computeSnap(dragged, [dragged]);
+    expect(result.snapX).toBeNull();
+    expect(result.snapY).toBeNull();
+    expect(result.guides).toHaveLength(0);
+  });
+
+  it('snapa no centro X quando nós estão próximos', () => {
+    const dragged = createNode('d', 102, 200);
+    const target = createNode('t', 100, 50);
+    const result = computeSnap(dragged, [dragged, target]);
+    // Centro X do target = 100 + 80 = 180; centro X do dragged = 102 + 80 = 182
+    // Diferença = 2 < threshold (8) → snap
+    expect(result.snapX).not.toBeNull();
+  });
+
+  it('snapa no centro Y quando nós estão próximos', () => {
+    const dragged = createNode('d', 300, 53);
+    const target = createNode('t', 50, 50);
+    const result = computeSnap(dragged, [dragged, target]);
+    // Centro Y target = 50 + 40 = 90; centro Y dragged = 53 + 40 = 93
+    // Diferença = 3 < threshold → snap
+    expect(result.snapY).not.toBeNull();
+  });
+
+  it('não snapa quando nós estão distantes', () => {
+    const dragged = createNode('d', 500, 500);
+    const target = createNode('t', 0, 0);
+    const result = computeSnap(dragged, [dragged, target]);
+    expect(result.snapX).toBeNull();
+    expect(result.snapY).toBeNull();
+  });
+
+  it('gera guide lines quando snap é detectado', () => {
+    const dragged = createNode('d', 100, 100);
+    const target = createNode('t', 100, 250);
+    const result = computeSnap(dragged, [dragged, target]);
+    // Borda esquerda alinhada perfeitamente → deve gerar guide
+    expect(result.guides.length).toBeGreaterThan(0);
+  });
+
+  it('snapa na borda esquerda de outro nó', () => {
+    const dragged = createNode('d', 103, 200);
+    const target = createNode('t', 100, 50);
+    const result = computeSnap(dragged, [dragged, target]);
+    // Borda esquerda target = 100; borda esquerda dragged = 103; diff = 3 < 8
+    expect(result.snapX).not.toBeNull();
+  });
+});
+```
+
+**Critérios de aceite:**
+- `npm test` executa todos os novos testes sem falhas.
+- Cobertura inclui: `connectionRules` (18 testes), `diagramSchema` (10 testes), `diagramStore` (16 testes), `computeSnap` (6 testes).
+- Nenhum teste existente (`useAutoSave.test.ts`) quebra.
+- `npm run build` continua passando.
+
+---
+
+### Fase 2 — Prioridade Baixa (refinamento técnico)
+
+---
+
+### 3.2 R5 — Save manual sem debounce temporal efetivo
+
+**Arquivo afetado:** `src/hooks/useSaveDiagram.ts`
+
+**Situação atual:**
+
+O save manual via `Ctrl+S` usa um guard booleano `if (saving) return` que previne saves paralelos, mas não implementa debounce temporal. Se o usuário pressionar `Ctrl+S`, esperar o save concluir (~1-2s), e pressionar novamente imediatamente, uma nova chamada de criptografia + save é disparada sem necessidade, pois nenhum dado mudou.
+
+A constante `SAVE_COOLDOWN_MS = 1500` está declarada no arquivo, indicando a intenção de throttle temporal, mas não é utilizada na lógica.
+
+**Impacto no score:** +1 ponto (pilar Segurança & Sessão)
+
+**Correção esperada:**
+
+Adicionar controle temporal usando `lastSaveTimestampRef`:
+
+```typescript
+const lastSaveTimestampRef = useRef<number>(0);
+
+const save = useCallback(async () => {
+  if (!user) return;
+  if (saving) return;
+
+  // R5: Throttle temporal — impede saves consecutivos dentro do cooldown
+  const now = Date.now();
+  if (now - lastSaveTimestampRef.current < SAVE_COOLDOWN_MS) {
+    toast({ title: 'Diagrama salvo recentemente. Aguarde um momento.' });
+    return;
+  }
+
+  // ... restante da lógica existente sem alteração ...
+
+  setSaving(true);
+  try {
+    lastSaveTimestampRef.current = Date.now();
+    // ... lógica de save existente ...
+  } catch (err: any) {
+    // ... tratamento de erro existente ...
+  } finally {
+    setSaving(false);
+  }
+}, [user, shareToken, saving]);
+```
+
+**Critérios de aceite:**
+- Pressionar `Ctrl+S` 5 vezes em 2 segundos dispara no máximo 1 save real e 1 toast informativo.
+- O timestamp é atualizado DENTRO do `try`, antes da chamada ao Supabase.
+- `npm run build` passa sem erros.
+
+---
+
+### 3.3 R2 — Cache de diagramas decriptados nas listagens
+
+**Arquivo afetado:** `src/pages/MyDiagrams.tsx`
+
+**Situação atual:**
+
+O `useInfiniteQuery` usa o `staleTime` padrão do `QueryClient` (30s). A descriptografia via Edge Function (HTTP round-trip) é executada para cada página de 12 diagramas. Se o usuário navegar para o editor e voltar em menos de 30s, o cache é utilizado. Porém, para listagens de diagramas que mudam com pouca frequência, 30s é conservador demais.
+
+**Impacto no score:** +1 ponto (pilar Performance & Requisições)
+
+**Correção esperada:**
+
+Aumentar `staleTime` e `gcTime` especificamente para a query de listagem:
+
+```typescript
+const {
+  data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage,
+} = useInfiniteQuery({
+  queryKey: ['diagrams', user?.id],
+  queryFn: ({ pageParam = 0 }) => loadUserDiagrams(user!.id, pageParam),
+  initialPageParam: 0,
+  getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+    lastPage.hasMore ? lastPageParam + 1 : undefined,
+  enabled: !!user,
+  staleTime: 60_000,   // 60s — diagramas mudam pouco na listagem
+  gcTime: 600_000,     // 10 min de cache após desmontagem do componente
+});
+```
+
+Aplicar a mesma configuração ao `useQuery` de diagramas compartilhados (se existente no componente):
+
+```typescript
+// Query de diagramas compartilhados (loadSharedWithMe)
+staleTime: 60_000,
+gcTime: 600_000,
+```
+
+**Critérios de aceite:**
+- Navegar para `/my-diagrams`, ir ao editor, e voltar em menos de 60s NÃO dispara nova descriptografia.
+- Mutations de delete/rename/duplicate continuam usando `invalidateQueries` para forçar refresh.
+- `npm run build` passa sem erros.
+
+---
+
+### 3.4 R3 — Purge automático de registros soft-deleted
+
+**Arquivo afetado:** Nova migration SQL em `supabase/migrations/`
+
+**Situação atual:**
+
+O PRD-16 implementou soft-delete (coluna `deleted_at`), mas não há mecanismo de purge dos registros marcados como excluídos. Com o tempo, a tabela `diagrams` acumulará registros invisíveis que ocupam espaço e impactam marginalmente a performance de queries (mesmo com `deleted_at IS NULL` nas policies, o Postgres precisa avaliar a condição).
+
+**Impacto no score:** +1 ponto (pilar Banco & Escalabilidade)
+
+**Correção esperada:**
+
+Criar migration: `supabase/migrations/<timestamp>_add_purge_soft_deleted.sql`
+
+```sql
+-- R3: Função para purgar diagramas soft-deleted com mais de 30 dias
+-- Pode ser chamada manualmente via Supabase SQL Editor ou agendada via pg_cron
+
+CREATE OR REPLACE FUNCTION public.purge_old_soft_deleted_diagrams()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  -- Remove shares associados aos diagramas que serão purgados
+  DELETE FROM public.diagram_shares
+  WHERE diagram_id IN (
+    SELECT id FROM public.diagrams
+    WHERE deleted_at IS NOT NULL
+      AND deleted_at < NOW() - INTERVAL '30 days'
+  );
+
+  -- Purga permanente dos diagramas soft-deleted há mais de 30 dias
+  DELETE FROM public.diagrams
+  WHERE deleted_at IS NOT NULL
+    AND deleted_at < NOW() - INTERVAL '30 days';
+
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+
+  RETURN deleted_count;
+END;
+
+$$;
+
+-- Comentário explicativo
+COMMENT ON FUNCTION public.purge_old_soft_deleted_diagrams()
+  IS 'Purga permanente de diagramas soft-deleted há mais de 30 dias. '
+     'Chamada manual: SELECT public.purge_old_soft_deleted_diagrams(); '
+     'Para agendamento automático, habilitar pg_cron no projeto Supabase e criar: '
+     'SELECT cron.schedule(''purge-deleted-diagrams'', ''0 3 * * 0'', ''SELECT public.purge_old_soft_deleted_diagrams()'');';
+
+-- Índice parcial para acelerar a query de purge (só indexa registros com deleted_at)
+CREATE INDEX IF NOT EXISTS idx_diagrams_deleted_at
+  ON public.diagrams (deleted_at)
+  WHERE deleted_at IS NOT NULL;
+```
+
+**Critérios de aceite:**
+- A função `purge_old_soft_deleted_diagrams()` existe no banco após rodar a migration.
+- Executar `SELECT public.purge_old_soft_deleted_diagrams()` no SQL Editor retorna o count de registros removidos.
+- Diagramas com `deleted_at` há menos de 30 dias NÃO são removidos.
+- Diagramas com `deleted_at` há mais de 30 dias são removidos permanentemente junto com seus `diagram_shares`.
+- O índice parcial `idx_diagrams_deleted_at` é criado.
+
+---
+
+### 3.5 R4 — `style-src 'unsafe-inline'` no CSP
+
+**Arquivo afetado:** Nenhuma alteração implementável neste momento.
+
+**Justificativa de não-ação:**
+
+O `'unsafe-inline'` no `style-src` é necessário para o funcionamento do Tailwind CSS (estilos utilitários que geram inline styles) e dos componentes Radix UI (que aplicam estilos via `style` attribute para posicionamento de popover, tooltip, dialog, etc.). Remover o `'unsafe-inline'` do `style-src` quebraria visualmente toda a aplicação.
+
+As alternativas seriam: (a) usar nonces para cada tag `<style>`, o que exigiria um server-side rendering ou middleware para injeção dinâmica — incompatível com o deploy estático Vercel + SPA; (b) migrar de Tailwind para CSS Modules/styled-components — custo de reescrita desproporcional ao ganho de segurança.
+
+**Decisão:** Aceitar o risco como residual. O `'unsafe-eval'` já foi removido no PRD-16 (o vetor de ataque mais perigoso), e o `'unsafe-inline'` em `style-src` é uma prática comum e aceita em SPAs com Tailwind.
+
+**Impacto no score:** 0 pontos (risco aceito)
+
+---
+
+### 3.6 R6 — Preparação para internacionalização (i18n)
+
+**Arquivos afetados:**
+- Modificar: `package.json` (adicionar dependência)
+- Criar: `src/i18n/index.ts`
+- Criar: `src/i18n/locales/pt-BR.json`
+- Criar: `src/i18n/locales/en.json`
+- Modificar: `src/App.tsx` (inicializar i18n)
+
+**Situação atual:**
+
+Toda a UI está em português com strings hardcoded diretamente nos componentes JSX. Expandir para outros idiomas exigiria busca e substituição em dezenas de arquivos.
+
+**Impacto no score:** +2 pontos (pilar Preparação para Crescimento)
+
+**Correção esperada:**
+
+Esta correção implementa apenas a **infraestrutura base** de i18n, sem migrar todas as strings. O objetivo é permitir a migração progressiva de strings em PRDs futuros.
+
+**Passo 1 — Adicionar dependência:**
+
+```bash
+bun add react-i18next i18next
+```
+
+**Passo 2 — Criar `src/i18n/index.ts`:**
+
+```typescript
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+import ptBR from './locales/pt-BR.json';
+import en from './locales/en.json';
+
+i18n.use(initReactI18next).init({
+  resources: {
+    'pt-BR': { translation: ptBR },
+    'en': { translation: en },
+  },
+  lng: navigator.language.startsWith('pt') ? 'pt-BR' : 'en',
+  fallbackLng: 'pt-BR',
+  interpolation: {
+    escapeValue: false, // React já faz escape de XSS
+  },
+});
+
+export default i18n;
+```
+
+**Passo 3 — Criar `src/i18n/locales/pt-BR.json`:**
+
+```json
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso"
+  },
+  "auth": {
+    "login": "Entrar",
+    "signup": "Criar conta",
+    "logout": "Sair",
+    "email": "E-mail",
+    "password": "Senha",
+    "forgotPassword": "Esqueci minha senha",
+    "resetPassword": "Redefinir senha"
+  },
+  "diagram": {
+    "newDiagram": "Novo Diagrama",
+    "myDiagrams": "Meus Diagramas",
+    "sharedWithMe": "Compartilhados comigo",
+    "savedToCloud": "Diagrama salvo na nuvem!",
+    "exportPNG": "Exportar PNG",
+    "exportSVG": "Exportar SVG",
+    "exportJSON": "Exportar JSON",
+    "importJSON": "Importar JSON",
+    "clearCanvas": "Limpar diagrama",
+    "autoLayout": "Layout automático",
+    "undo": "Desfazer",
+    "redo": "Refazer"
+  },
+  "nodes": {
+    "service": "Microserviço",
+    "database": "Banco de Dados",
+    "queue": "Fila/Mensageria",
+    "external": "Sistema Externo"
+  }
+}
+```
+
+**Passo 4 — Criar `src/i18n/locales/en.json`:**
+
+```json
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "auth": {
+    "login": "Sign in",
+    "signup": "Sign up",
+    "logout": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password"
+  },
+  "diagram": {
+    "newDiagram": "New Diagram",
+    "myDiagrams": "My Diagrams",
+    "sharedWithMe": "Shared with me",
+    "savedToCloud": "Diagram saved to cloud!",
+    "exportPNG": "Export PNG",
+    "exportSVG": "Export SVG",
+    "exportJSON": "Export JSON",
+    "importJSON": "Import JSON",
+    "clearCanvas": "Clear canvas",
+    "autoLayout": "Auto layout",
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+  "nodes": {
+    "service": "Microservice",
+    "database": "Database",
+    "queue": "Queue/Messaging",
+    "external": "External System"
+  }
+}
+```
+
+**Passo 5 — Modificar `src/App.tsx`:**
+
+Adicionar import no topo (antes de qualquer componente):
+
+```typescript
+import './i18n';
+```
+
+Isso é suficiente — o `initReactI18next` conecta automaticamente ao React context.
+
+**Critérios de aceite:**
+- `npm run build` passa sem erros.
+- A aplicação carrega normalmente com o idioma detectado pelo navegador.
+- Não há nenhuma alteração visual (nenhuma string de componente foi migrada ainda).
+- O hook `useTranslation()` está disponível para uso futuro em qualquer componente.
+- Os arquivos de locale contêm as strings mais comuns da aplicação como base para migração progressiva.
+
+---
+
+### 3.7 R7 — Sem landing page / onboarding
+
+**Arquivo afetado:** Nenhuma alteração neste PRD.
+
+**Justificativa de não-ação:**
+
+A criação de uma landing page é uma decisão de produto, não técnica. A rota atual (`/` → editor com gate de autenticação) é funcional para o caso de uso atual. Uma landing page exigiria definição de copy, design, CTAs e possivelmente planos de monetização — tudo fora do escopo de uma auditoria técnica.
+
+**Decisão:** Registrar como recomendação de produto para PRD futuro. A infraestrutura técnica (react-router, lazy loading, Vercel deploy) já suporta a adição de uma landing page sem refatoração.
+
+**Impacto no score:** 0 pontos (decisão de produto)
+
+---
+
+## 4. Dependências entre Apontamentos
+
+```
+R1  ──independente (pode ser executado primeiro para criar rede de segurança)
+R5  ──independente
+R2  ──independente
+R3  ──independente (depende apenas de R9/PRD-16 que já está aplicado)
+R4  ──não-ação (aceito como residual)
+R6  ──independente
+R7  ──não-ação (decisão de produto)
+```
+
+Sem dependências entre itens — todos podem ser executados em paralelo ou em qualquer ordem.
+
+---
+
+## 5. Ordem de Execução Recomendada
+
+**Fase 1 — Prioridade Média (executar primeiro):**
+
+1. **R1** — Testes unitários (cria rede de segurança para as demais alterações)
+
+Rodar `npm run build` e `npm test` ao final da Fase 1.
+
+**Fase 2 — Prioridade Baixa (qualquer ordem):**
+
+2. **R5** — Debounce temporal no save manual
+3. **R2** — Cache de listagens com staleTime/gcTime estendidos
+4. **R3** — Função de purge + índice parcial (migration SQL)
+5. **R6** — Infraestrutura i18n base
+
+Rodar `npm run build` e `npm test` ao final da Fase 2.
+
+**Sem ação (documentados para referência):**
+
+- **R4** — `style-src 'unsafe-inline'` (aceito como residual)
+- **R7** — Landing page (decisão de produto)
+
+---
+
+## 6. Impacto Projetado no Score
+
+| Apontamento | Pilar                     | Pontos |
+|-------------|---------------------------|:------:|
+| R1 — Testes unitários               | Arquitetura & Estrutura   | +3     |
+| R5 — Debounce save manual           | Segurança & Sessão        | +1     |
+| R2 — Cache de listagens             | Performance & Requisições | +1     |
+| R3 — Purge soft-deleted             | Banco & Escalabilidade    | +1     |
+| R6 — Infraestrutura i18n            | Preparação p/ Crescimento | +2     |
+| R4 — CSP unsafe-inline (não-ação)   | —                         | 0      |
+| R7 — Landing page (não-ação)        | —                         | 0      |
+
+
+$$\text{Score Projetado} = 89 + 3 + 1 + 1 + 1 + 2 = \mathbf{97\ /\ 100}$$
+
+---
+
+## 7. Critérios de Aceitação Globais
+
+Após a execução de todos os apontamentos implementáveis, os seguintes critérios devem ser atendidos sem nenhuma regressão funcional:
+
+- `npm run build` executa sem erros
+- `npm run test` passa em TODOS os testes (6 existentes + ~50 novos)
+- `npx tsc --noEmit` compila sem erros TypeScript
+- O save manual via `Ctrl+S` respeita cooldown de 1500ms entre saves
+- A navegação `/my-diagrams` → editor → `/my-diagrams` em <60s reutiliza o cache
+- A função `purge_old_soft_deleted_diagrams()` está disponível no Supabase SQL Editor
+- O índice parcial `idx_diagrams_deleted_at` existe no banco
+- O hook `useTranslation()` do react-i18next está funcional em qualquer componente
+- Nenhum comportamento funcional visível ao usuário foi alterado
+- Nenhum componente visual mudou de aparência

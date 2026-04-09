@@ -1,0 +1,310 @@
+🎯 OBJETIVO GERAL
+Elevar o score de saúde do MicroFlow Architect de 77 para ~88 pontos através da execução de 4 melhorias técnicas identificadas na auditoria, sem alterar nenhum comportamento funcional visível ao usuário final.
+
+📦 MELHORIA 1 — ELK Web Worker
+Pilar: Performance & Requisições Impacto esperado no score: +3 pts Risco de regressão: Baixo — a interface pública do layoutService.ts não muda
+
+Contexto técnico: O algoritmo ELK (elkjs) executa atualmente na thread principal do React. Em diagramas com muitos nós, isso bloqueia o event loop e causa travamento visual (jank). O pacote web-worker já está listado nas dependências do package.json. O layoutService.ts já usa dynamic import (await import('elkjs')), o que facilita a migração. A migração deve criar um Worker dedicado para o ELK e manter a interface async getELKLayoutedElements() inalterada para que diagramStore.ts não precise de alterações.
+
+🤖 PROMPT LOVABLE — MELHORIA 1:
+
+Preciso mover o algoritmo de layout ELK para um Web Worker dedicado no projeto MicroFlow Architect, para evitar que o cálculo bloqueie a thread principal do React. O pacote `web-worker` já está nas dependências. Não altere nenhum comportamento visível ao usuário.
+
+## Arquivos a criar / modificar
+
+### 1. CRIAR: `src/workers/elkWorker.ts`
+Este arquivo será executado dentro do Web Worker. Ele deve:
+- Importar elkjs de forma estática: `import ELK from 'elkjs/lib/elk.bundled.js'`
+- Instanciar um singleton: `const elk = new ELK()`
+- Escutar mensagens via `self.onmessage`
+- Receber um payload do tipo: `{ id: string, graph: ElkNode }`
+- Chamar `elk.layout(graph)` e postar de volta: `self.postMessage({ id, result })` em caso de sucesso
+- Em caso de erro, postar: `self.postMessage({ id, error: String(e) })`
+- O tipo ElkNode deve ser importado de 'elkjs'
+
+### 2. MODIFICAR: `src/services/layoutService.ts`
+Substituir a execução direta do ELK por uma chamada ao Web Worker. A função `getELKLayoutedElements` deve manter exatamente a mesma assinatura:
+```ts
+export async function getELKLayoutedElements(
+  nodes: DiagramNode[],
+  edges: DiagramEdge[],
+  direction: LayoutDirection = 'LR'
+): Promise<{ nodes: DiagramNode[]; edges: DiagramEdge[] }>
+Internamente, a nova implementação deve:
+
+Criar o Worker com import Worker from 'web-worker' usando a URL do arquivo elkWorker.ts via new URL('../workers/elkWorker.ts', import.meta.url)
+Usar um singleton do Worker (inicializado na primeira chamada, reutilizado nas seguintes): let workerInstance: Worker | null = null
+Usar uma Promise com resolve/reject + worker.onmessage / worker.onerror para receber o resultado de forma assíncrona
+Usar um id único por chamada (ex: Date.now().toString()) para correlacionar request/response, pois o Worker pode receber chamadas paralelas
+Manter o mesmo objeto graph que já existe na função atual com todas as layoutOptions ELK já configuradas
+Mapear o resultado de volta para DiagramNode[] exatamente como hoje: buscando layouted.children?.find(n => n.id === node.id) para posição x/y
+Em caso de erro no Worker, fazer fallback silencioso retornando os nós com suas posições originais (sem lançar exceção)
+Remover completamente a variável elkInstance que existia antes e o dynamic import de elkjs
+3. MODIFICAR: vite.config.ts (ou criar se não existir)
+Garantir que o Vite processe o worker corretamente adicionando na config:
+
+Copyworker: {
+  format: 'es'
+}
+Restrições importantes
+NÃO alterar src/store/diagramStore.ts — as chamadas autoLayoutELK() devem continuar funcionando sem mudança
+NÃO alterar nenhum componente React
+NÃO alterar a função getLayoutedElements (Dagre) — apenas o ELK é migrado
+Manter todos os tipos TypeScript existentes
+O fallback em caso de erro do Worker deve ser silencioso (sem toast, sem console.error visível ao usuário)
+
+---
+
+## 📦 MELHORIA 2 — Validação Zod do Output da IA nas Edge Functions
+
+**Pilar:** Segurança & Sessão
+**Impacto esperado no score:** +2 pts
+**Risco de regressão:** Baixo — adiciona validação sem alterar fluxo feliz
+
+**Contexto técnico:** As Edge Functions `generate-diagram/index.ts` e `analyze-diagram/index.ts` retornam o output da IA ao cliente após um parsing mínimo de JSON. O output do modelo pode conter campos inesperados, estruturas malformadas ou resultado de prompt injection. A Edge Function já tem acesso ao schema de nós/edges via contrato implícito — precisamos tornar esse contrato explícito com validação Zod no Deno, usando schemas inline (pois as Edge Functions Deno não compartilham diretamente o código do frontend). O `analyze-diagram` retorna texto livre, então a validação lá é apenas de estrutura mínima de resposta.
+
+---
+
+> 🤖 **PROMPT LOVABLE — MELHORIA 2:**
+
+Preciso adicionar validação Zod do output da IA nas duas Edge Functions do MicroFlow Architect: generate-diagram e analyze-diagram. Isso protege contra outputs malformados ou inesperados do modelo de IA antes de retornar ao cliente. Não altere nenhum comportamento funcional — apenas adicione a camada de validação.
+
+1. MODIFICAR: supabase/functions/generate-diagram/index.ts
+Adicionar import Zod no topo do arquivo:
+Copyimport { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+Adicionar schemas de validação logo após os imports (antes do MODEL_CASCADE):
+Copy// ─── Output Validation Schemas ───
+const AiNodeDataSchema = z.object({
+  label: z.string().min(1).max(100),
+  type: z.enum(['service', 'database', 'queue', 'external']),
+  subType: z.string().optional(),
+  externalCategory: z.enum(['API','CDN','Auth','Payment','Storage','Analytics','Other']).optional(),
+  internalDatabases: z.array(z.unknown()).optional().default([]),
+  internalServices: z.array(z.unknown()).optional().default([]),
+}).passthrough();
+
+const AiNodeSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(['service', 'database', 'queue', 'external']),
+  position: z.object({ x: z.number(), y: z.number() }),
+  data: AiNodeDataSchema,
+}).passthrough();
+
+const AiEdgeSchema = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1),
+  target: z.string().min(1),
+  type: z.string().optional(),
+  animated: z.boolean().optional(),
+  label: z.string().optional(),
+  data: z.object({
+    protocol: z.string().optional(),
+  }).passthrough().optional(),
+}).passthrough();
+
+const AiDiagramOutputSchema = z.object({
+  nodes: z.array(AiNodeSchema).min(1).max(100),
+  edges: z.array(AiEdgeSchema).max(300),
+});
+Copy
+Substituir o bloco final de processamento da resposta da IA (onde JSON.parse(content) é chamado):
+O bloco atual faz const diagram = JSON.parse(content) e depois normaliza edges. Substitua por:
+
+Copylet diagram: z.infer<typeof AiDiagramOutputSchema>;
+try {
+  const rawDiagram = JSON.parse(content);
+  const parsed = AiDiagramOutputSchema.safeParse(rawDiagram);
+  if (!parsed.success) {
+    console.error("AI output validation failed:", JSON.stringify(parsed.error.issues));
+    return new Response(
+      JSON.stringify({ error: "O modelo de IA retornou uma estrutura inválida. Tente reformular sua descrição." }),
+      { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  diagram = parsed.data;
+} catch (_parseError) {
+  return new Response(
+    JSON.stringify({ error: "O modelo de IA retornou um JSON inválido. Tente novamente." }),
+    { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+Manter intacto o bloco de normalização de edges (o diagram.edges.map(...) que já existe) logo após esse bloco.
+
+2. MODIFICAR: supabase/functions/analyze-diagram/index.ts
+Adicionar import Zod no topo:
+Copyimport { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+Adicionar schema mínimo de validação do output da análise logo após os imports:
+Copyconst AiAnalysisOutputSchema = z.object({
+  analysis: z.string().min(1).max(50000),
+});
+Substituir o bloco final onde analysis é extraído da resposta da IA:
+O bloco atual faz:
+
+Copyconst analysis = result.data.choices?.[0]?.message?.content || "Sem análise disponível.";
+return new Response(JSON.stringify({ analysis }), { ... });
+Substituir por:
+
+Copyconst rawAnalysis = result.data.choices?.[0]?.message?.content;
+if (!rawAnalysis || typeof rawAnalysis !== 'string' || rawAnalysis.trim().length === 0) {
+  return new Response(
+    JSON.stringify({ error: "O modelo de IA não retornou uma análise válida. Tente novamente." }),
+    { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+const validationResult = AiAnalysisOutputSchema.safeParse({ analysis: rawAnalysis.trim() });
+if (!validationResult.success) {
+  return new Response(
+    JSON.stringify({ error: "Análise inválida retornada pelo modelo. Tente novamente." }),
+    { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+return new Response(JSON.stringify(validationResult.data), {
+  headers: { ...corsHeaders, "Content-Type": "application/json" },
+});
+Restrições importantes
+NÃO alterar nenhum arquivo frontend (src/)
+NÃO alterar a lógica de autenticação, rate limiting ou CORS em nenhuma das funções
+Manter todos os console.error já existentes
+O status HTTP 422 é intencional para distinguir erro de validação de output de IA (422) de erros do servidor (500)
+
+---
+
+## 📦 MELHORIA 3 — React.memo nos Componentes de Painel
+
+**Pilar:** Performance & Requisições
+**Impacto esperado no score:** +2 pts
+**Risco de regressão:** Baixo — `React.memo` é aditivo e não altera comportamento
+
+**Contexto técnico:** Os componentes `NodePropertiesPanel`, `Toolbar`, `DiagramLegend`, `CollaboratorAvatars` e `StatusBar` são re-renderizados com cada mudança no `diagramStore`, mesmo quando suas próprias props não mudam. Como o store é mutado frequentemente durante drag-and-drop e colaboração em tempo real, esses componentes acumulam re-renders desnecessários. O `React.memo` com comparação superficial de props resolve o problema sem necessidade de `useMemo` ou `useCallback` nos componentes pais.
+
+---
+
+> 🤖 **PROMPT LOVABLE — MELHORIA 3:**
+
+Preciso aplicar React.memo em cinco componentes do MicroFlow Architect para evitar re-renders desnecessários durante operações de drag-and-drop e colaboração em tempo real. Não altere nenhuma lógica, JSX ou props desses componentes — apenas envolva os exports com React.memo.
+
+Arquivos a modificar
+1. src/components/NodePropertiesPanel.tsx
+Localizar a declaração da função do componente (provavelmente function NodePropertiesPanel(...) ou const NodePropertiesPanel = (...))
+Envolver com React.memo: o export default deve se tornar export default React.memo(NodePropertiesPanel)
+Adicionar import de memo no import do React caso não esteja: import React, { memo } from 'react' ou simplesmente usar React.memo
+Se o componente já usa export default function NodePropertiesPanel, converter para: declarar a função separada e depois export default React.memo(NodePropertiesPanel)
+2. src/components/Toolbar.tsx
+Mesma abordagem: export default React.memo(Toolbar)
+3. src/components/DiagramLegend.tsx
+Mesma abordagem: export default React.memo(DiagramLegend)
+4. src/components/CollaboratorAvatars.tsx
+Mesma abordagem: export default React.memo(CollaboratorAvatars)
+5. src/components/StatusBar.tsx
+Mesma abordagem: export default React.memo(StatusBar)
+Padrão de transformação esperado para cada arquivo:
+ANTES:
+
+Copyexport default function NomeDoComponente({ prop1, prop2 }: Props) {
+  return <div>...</div>
+}
+DEPOIS:
+
+Copyfunction NomeDoComponente({ prop1, prop2 }: Props) {
+  return <div>...</div>
+}
+
+export default React.memo(NomeDoComponente);
+Ou se o componente usa arrow function:
+
+ANTES:
+
+Copyconst NomeDoComponente = ({ prop1 }: Props) => {
+  return <div>...</div>
+}
+export default NomeDoComponente;
+DEPOIS:
+
+Copyconst NomeDoComponente = ({ prop1 }: Props) => {
+  return <div>...</div>
+}
+export default React.memo(NomeDoComponente);
+Restrições importantes
+NÃO alterar nenhuma lógica interna, hooks, handlers ou JSX de nenhum dos componentes
+NÃO adicionar displayName manual (React.memo define automaticamente)
+NÃO alterar nenhum arquivo que importa esses componentes — os imports continuam exatamente iguais
+NÃO aplicar React.memo em DiagramCanvas.tsx — esse componente tem estado interno complexo e a análise de memo deve ser feita separadamente
+Garantir que React está importado em cada arquivo modificado (necessário para React.memo)
+
+---
+
+## 📦 MELHORIA 4 — QueryClient com Configuração Explícita + Limpeza de AutoSave Pós-Save
+
+**Pilar:** Performance & Arquitetura
+**Impacto esperado no score:** +2 pts
+**Risco de regressão:** Muito baixo — mudanças conservadoras e aditivas
+
+**Contexto técnico:** O `QueryClient` em `App.tsx` é instanciado sem nenhuma configuração, usando os defaults do React Query que não são adequados para produção (sem `staleTime` definido significa que dados são sempre considerados stale e re-buscados ao refetch). O `useAutoSave` salva na `localStorage` mas não limpa o dado após um save bem-sucedido na nuvem via `useSaveDiagram`, fazendo o banner de recuperação aparecer desnecessariamente na próxima sessão do mesmo usuário.
+
+---
+
+> 🤖 **PROMPT LOVABLE — MELHORIA 4:**
+
+Preciso de duas correções pontuais no MicroFlow Architect: (1) configurar o QueryClient com parâmetros explícitos de produção, e (2) limpar o auto-save local após um save bem-sucedido na nuvem. Não altere nenhum comportamento visível ao usuário além da correção do banner de recuperação fantasma.
+
+Correção A — src/App.tsx: QueryClient com configuração explícita
+Substituir a linha:
+Copyconst queryClient = new QueryClient();
+Por:
+Copyconst queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,        // dados considerados frescos por 30s
+      gcTime: 300_000,          // cache mantido por 5min após desmontagem
+      retry: 2,                 // 2 tentativas em caso de erro de rede
+      refetchOnWindowFocus: false, // não refaz queries ao focar a janela
+    },
+    mutations: {
+      retry: 0,                 // mutations não fazem retry automático
+    },
+  },
+});
+Correção B — src/hooks/useSaveDiagram.ts: limpar auto-save após save na nuvem
+Contexto:
+O arquivo useSaveDiagram.ts chama saveDiagram() do diagramService.ts. Após um save bem-sucedido, o auto-save na localStorage deve ser limpo para evitar que o RecoveryBanner apareça desnecessariamente na próxima sessão.
+
+Adicionar o import da função clearAutoSave no topo do arquivo:
+Copyimport { clearAutoSave } from '@/hooks/useAutoSave';
+Localizar o bloco onde o save na nuvem é bem-sucedido (onde savedRecord ou equivalente é retornado sem erro) e adicionar a chamada logo após o sucesso confirmado:
+CopyclearAutoSave();
+Esta chamada deve ser feita SOMENTE no caminho de sucesso (dentro do try, após a confirmação de que o save funcionou), NUNCA no catch ou no finally.
+
+Restrições importantes
+NÃO alterar nenhuma outra parte do App.tsx além da instanciação do QueryClient
+NÃO alterar a lógica de useAutoSave.ts em si — apenas adicionar a chamada a clearAutoSave() no useSaveDiagram.ts
+NÃO alterar o RecoveryBanner.tsx — o comportamento correto emerge naturalmente da limpeza do localStorage
+Confirmar que clearAutoSave é uma named export de useAutoSave.ts antes de importar (ela está definida como export function clearAutoSave())
+
+---
+
+## 📊 RESUMO DO PRD
+
+| # | Melhoria | Arquivo(s) Afetado(s) | Pilar | Score Esperado |
+|---|---|---|---|:---:|
+| 1 | ELK → Web Worker | `layoutService.ts`, `elkWorker.ts` (novo), `vite.config.ts` | Performance | +3 |
+| 2 | Validação Zod output IA | `generate-diagram/index.ts`, `analyze-diagram/index.ts` | Segurança | +2 |
+| 3 | React.memo nos painéis | 5 componentes de painel/toolbar | Performance | +2 |
+| 4 | QueryClient config + AutoSave cleanup | `App.tsx`, `useSaveDiagram.ts` | Performance/Arquitetura | +2 |
+
+
+$$\text{Score Projetado} = 77 + 3 + 2 + 2 + 2 = \mathbf{86\ /\ 100}$$
+
+---
+
+## ✅ CRITÉRIOS DE ACEITAÇÃO GLOBAIS
+
+Após a execução de todos os prompts, os seguintes critérios devem ser atendidos sem nenhuma regressão funcional:
+
+- O layout automático ELK continua funcionando em todas as 4 direções (TB, LR, BT, RL)
+- O layout Dagre continua funcionando independentemente do Worker ELK
+- A geração de diagramas via IA continua retornando diagramas válidos para descrições bem formadas
+- A análise de arquitetura via IA continua retornando texto de análise completo
+- O save na nuvem continua funcionando e o banner de recuperação **não aparece** após um save bem-sucedido na sessão anterior
+- Nenhum componente visual mudou de aparência ou comportamento
+- O comando `npm run build` executa sem erros
+- O comando `npm run test` continua passando em todos os testes existentes
