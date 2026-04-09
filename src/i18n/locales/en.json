@@ -9,7 +9,9 @@
     "tryAgain": "Try again",
     "close": "Close",
     "waiting": "Please wait...",
-    "back": "Back"
+    "back": "Back",
+    "goBack": "← Back",
+    "loadingSlowNetwork": "Loading... This is taking longer than expected."
   },
   "errors": {
     "unexpected": "Unexpected error",
@@ -19,7 +21,9 @@
     "somethingWrong": "Something went wrong.",
     "diagramRender": "Error rendering diagram",
     "diagramRenderDesc": "An unexpected error occurred. Your data has been preserved in local auto-save.",
-    "reload": "Reload page"
+    "reload": "Reload page",
+    "newVersionAvailable": "A new version of the app is available.",
+    "errorId": "Error ID:"
   },
   "auth": {
     "login": "Sign in",
@@ -347,7 +351,9 @@
   },
   "notFound": {
     "title": "Page not found",
-    "home": "Return to Home"
+    "subtitle": "The page you are looking for does not exist or has been moved.",
+    "home": "Return to Home",
+    "goToApp": "Go to app"
   },
   "connectionError": {
     "message": "{{source}} cannot connect to {{target}}"
