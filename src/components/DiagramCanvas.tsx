@@ -289,7 +289,7 @@ function DiagramCanvasInner({ shareToken, readOnly = false }: DiagramCanvasProps
           onNodesChange={readOnly ? undefined : onNodesChange}
           onEdgesChange={readOnly ? undefined : onEdgesChange}
           onConnect={readOnly ? undefined : handleConnect}
-          onNodeDrag={readOnly ? undefined : (event, node) => { onNodeDrag(event, node); onNodeDragHandler(event, node as any); }}
+          onNodeDrag={readOnly ? undefined : (event, node) => { onNodeDrag(event, node); onNodeDragHandler(event, node as DiagramNode); }}
           onNodeDragStop={readOnly ? undefined : onNodeDragStop}
           onNodeContextMenu={readOnly ? undefined : handleNodeContextMenu}
           onPaneClick={handlePaneClick}
