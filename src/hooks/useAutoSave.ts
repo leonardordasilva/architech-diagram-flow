@@ -43,7 +43,9 @@ const SUPPORTS_COMPRESSION = typeof CompressionStream !== 'undefined';
 // PERF-06: Compress string using CompressionStream
 async function compressString(input: string): Promise<string> {
   if (!SUPPORTS_COMPRESSION) {
-    return btoa(unescape(encodeURIComponent(input)));
+    const bytes = new TextEncoder().encode(input);
+    const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join('');
+    return btoa(binString);
   }
   const blob = new Blob([input]);
   const stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
@@ -73,7 +75,9 @@ async function compressString(input: string): Promise<string> {
 // PERF-06: Decompress base64-encoded gzip string
 async function decompressString(base64: string): Promise<string> {
   if (!SUPPORTS_COMPRESSION) {
-    return decodeURIComponent(escape(atob(base64)));
+    const binString = atob(base64);
+    const bytes = Uint8Array.from(binString, (ch) => ch.codePointAt(0)!);
+    return new TextDecoder().decode(bytes);
   }
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
