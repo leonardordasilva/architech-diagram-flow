@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </h2>
             {this.state.isChunkError ? (
               <p className="text-sm text-muted-foreground">
-                {i18n.t('errors.newVersionAvailable', 'A new version of the app is available.')}
+                {i18n.t('errors.newVersionAvailable', 'Uma nova versão do aplicativo está disponível.')}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">

@@ -273,20 +273,27 @@ serve(async (req) => {
 
         const sub = await stripe.subscriptions.retrieve(subscriptionId);
 
+        // Resolve plan from actual price ID — reliable even after portal upgrades/downgrades
+        const renewedPriceId = sub.items.data[0]?.price?.id ?? "";
+        const resolvedPlan = renewedPriceId
+          ? resolvePlanFromPriceId(renewedPriceId)
+          : dbSub.plan;
+
         await serviceSupabase
           .from("subscriptions")
           .update({
             status: "active",
+            plan: resolvedPlan,
             current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", dbSub.user_id);
 
-        // Ensure profiles.plan is in sync
+        // Ensure profiles.plan is in sync with the resolved plan
         await serviceSupabase
           .from("profiles")
-          .update({ plan: dbSub.plan })
+          .update({ plan: resolvedPlan })
           .eq("id", dbSub.user_id);
 
         console.log(JSON.stringify({ fn: 'stripe-webhook', msg: 'invoice.paid: period updated', userId: dbSub.user_id }));

@@ -30,8 +30,8 @@ export default function Privacy() {
             <h2 className="text-xl font-semibold mb-3">{isPt ? '1. Quem Somos (Controlador dos Dados)' : '1. Who We Are (Data Controller)'}</h2>
             <p>
               {isPt
-                ? 'MicroFlow Architect é operado por MicroFlow Tecnologia Ltda. (CNPJ a definir). Encarregado de Proteção de Dados (DPO): privacidade@microflow.dev'
-                : 'MicroFlow Architect is operated by MicroFlow Tecnologia Ltda. (CNPJ to be defined). Data Protection Officer (DPO): privacidade@microflow.dev'}
+                ? 'MicroFlow Architect é operado por MicroFlow Tecnologia Ltda. (CNPJ em processo de registro). Encarregado de Proteção de Dados (DPO): privacidade@microflow.dev'
+                : 'MicroFlow Architect is operated by MicroFlow Tecnologia Ltda. (CNPJ registration in progress). Data Protection Officer (DPO): privacidade@microflow.dev'}
             </p>
           </section>
 

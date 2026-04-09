@@ -303,9 +303,9 @@ Deno.serve(async (req) => {
         }
 
         if (isForbidden(error)) {
-          await moveToDlq(supabase, queue, msg, 'Emails disabled for this project')
+          await moveToDlq(supabase, queue, msg, 'Brevo API key invalid or plan exceeded (403)')
           return new Response(
-            JSON.stringify({ processed: totalProcessed, stopped: 'emails_disabled' }),
+            JSON.stringify({ processed: totalProcessed, stopped: 'brevo_forbidden' }),
             { headers: { 'Content-Type': 'application/json' } }
           )
         }
