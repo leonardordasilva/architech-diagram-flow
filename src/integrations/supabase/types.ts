@@ -282,6 +282,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_admin: boolean
           plan: string
           suspended_at: string | null
         }
@@ -290,6 +291,7 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          is_admin?: boolean
           plan?: string
           suspended_at?: string | null
         }
@@ -298,6 +300,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_admin?: boolean
           plan?: string
           suspended_at?: string | null
         }
@@ -626,6 +629,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_diagram_collaborator: {
         Args: { p_diagram_id: string; p_user_id: string }
         Returns: boolean
