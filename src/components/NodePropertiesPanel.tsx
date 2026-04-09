@@ -146,6 +146,7 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
           <Input
             value={label}
             onChange={(e) => handleLabelChange(e.target.value)}
+            onBlur={commitLabel}
             className="h-9 text-sm"
           />
         </div>
@@ -197,6 +198,7 @@ function NodePropertiesPanel({ nodeId, onClose }: NodePropertiesPanelProps) {
                   <Input
                     value={db.label}
                     onChange={(e) => handleDbLabelChange(i, e.target.value)}
+                    onBlur={commitDbs}
                     className="h-8 text-xs flex-1"
                   />
                   <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeDb(i)} aria-label={t('nodePanel.removeDb')}>
