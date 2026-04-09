@@ -4,6 +4,7 @@ import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase
 import { DbDiagramNodesSchema, DbDiagramEdgesSchema } from '@/schemas/diagramSchema';
 import { encryptDiagramData, decryptDiagramData } from '@/services/cryptoService';
 import i18n from '@/i18n';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 /** Compute a SHA-256 hash of the serialized nodes+edges for integrity checks */
 async function computeContentHash(nodes: unknown[], edges: unknown[]): Promise<string> {
@@ -122,10 +123,10 @@ export async function saveDiagram(
       created_at: fnData.created_at,
       updated_at: fnData.updated_at,
     };
-  } catch (edgeFnErr: any) {
+  } catch (edgeFnErr: unknown) {
     // Re-throw limit error
-    if (edgeFnErr?.message === 'DIAGRAM_LIMIT_EXCEEDED') throw edgeFnErr;
-    console.warn('[diagramService] Edge function save failed, falling back to client-side:', edgeFnErr?.message);
+    if (getErrorMessage(edgeFnErr) === 'DIAGRAM_LIMIT_EXCEEDED') throw edgeFnErr;
+    console.warn('[diagramService] Edge function save failed, falling back to client-side:', getErrorMessage(edgeFnErr));
   }
 
   // ── Fallback: client-side encrypt + save ──
@@ -329,11 +330,11 @@ export async function saveSharedDiagram(
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
     return;
-  } catch (edgeFnErr: any) {
-    if (edgeFnErr?.message === 'Forbidden') {
+  } catch (edgeFnErr: unknown) {
+    if (getErrorMessage(edgeFnErr) === 'Forbidden') {
       throw new Error('Você não tem permissão de edição neste diagrama.');
     }
-    console.warn('[diagramService] Edge function save-shared failed, falling back:', edgeFnErr?.message);
+    console.warn('[diagramService] Edge function save-shared failed, falling back:', getErrorMessage(edgeFnErr));
   }
 
   // Fallback: client-side encrypt+save

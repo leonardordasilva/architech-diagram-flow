@@ -182,9 +182,11 @@ export function useAutoSave() {
         }
 
         setSaveStatus('saved');
-      } catch (e: any) {
+      } catch (e: unknown) {
         // PERF-06: Handle storage quota exceeded
-        if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+        const eName = e instanceof Error ? e.name : '';
+        const eCode = e && typeof e === 'object' && 'code' in e ? (e as any).code : undefined;
+        if (eName === 'QuotaExceededError' || eCode === 22) {
           toast({
             title: i18n.t('autoSave.storageFull'),
             description: i18n.t('autoSave.storageFullDesc'),
