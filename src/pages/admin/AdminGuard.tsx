@@ -11,8 +11,10 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   if (loading) return <LoadingSpinner />;
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-  if (!user || !adminEmail || user.email !== adminEmail) {
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
+  const userEmail = user?.email?.trim().toLowerCase();
+
+  if (!user || !adminEmail || userEmail !== adminEmail) {
     return <Navigate to="/" replace />;
   }
 

@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
   const projectId = env.VITE_SUPABASE_PROJECT_ID?.trim() || defaults.VITE_SUPABASE_PROJECT_ID || "bbalunqbiwkvvvcnjmsh";
   const supabaseUrl = env.VITE_SUPABASE_URL?.trim() || defaults.VITE_SUPABASE_URL || `https://${projectId}.supabase.co`;
   const publishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || env.VITE_SUPABASE_ANON_KEY?.trim() || defaults.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+  const adminEmail = env.VITE_ADMIN_EMAIL?.trim() || defaults.VITE_ADMIN_EMAIL || "";
 
   return {
     server: {
@@ -45,6 +46,7 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(publishableKey),
       "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(publishableKey),
+      "import.meta.env.VITE_ADMIN_EMAIL": JSON.stringify(adminEmail),
     },
     html: {
       cspNonce: "placeholder",
