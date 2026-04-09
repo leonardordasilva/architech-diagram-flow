@@ -65,37 +65,19 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
     }
 
     setSaving(true);
+    let savedRecord: { id: string } | null = null;
+    const isNewDiagram = !diagramId;
+    const isSharedContext = !!shareToken && !diagramId;
+
     try {
       lastSaveTimestampRef.current = Date.now();
       if (isCollaborator && diagramId) {
         await saveSharedDiagram(diagramId, nodes, edges);
-        clearAutoSave();
-        useDiagramStore.getState().setIsDirty(false);
-        toast({ title: t('save.sharedSaved') });
       } else {
-        const isSharedContext = !!shareToken && !diagramId;
         const workspaceId = useWorkspaceStore.getState().currentWorkspace?.id ?? null;
-        const isNewDiagram = !diagramId;
-        const record = await saveDiagram(diagramName, nodes, edges, user.id, diagramId, workspaceId);
-        setDiagramId(record.id);
-        clearAutoSave();
-        useDiagramStore.getState().setIsDirty(false);
-        if (isNewDiagram) {
-          queryClient.invalidateQueries({ queryKey: ['diagrams', user.id] });
-        }
-        if (isSharedContext) {
-          toast({
-            title: t('save.savedAsCopy'),
-            description: t('save.savedAsCopyDesc'),
-            duration: 6000,
-          });
-        } else {
-          toast({ title: t('save.savedToCloud') });
-        }
+        savedRecord = await saveDiagram(diagramName, nodes, edges, user.id, diagramId, workspaceId);
       }
     } catch (err: unknown) {
-      // B6: Trigger raises DIAGRAM_LIMIT_EXCEEDED when the server-side cap is hit
-      // (race condition or direct API access that bypassed the client-side check)
       const msg = getErrorMessage(err);
       if (msg === 'DIAGRAM_LIMIT_EXCEEDED') {
         onDiagramLimitReached?.();
@@ -103,9 +85,34 @@ export function useSaveDiagram({ shareToken, onDiagramLimitReached }: UseSaveDia
         console.error('[useSaveDiagram] Save error:', err);
         toast({ title: t('save.error'), description: msg, variant: 'destructive' });
       }
-    } finally {
       setSaving(false);
+      return;
     }
+
+    // State updates only after confirmed success — prevents diagramId desync on partial failure
+    if (savedRecord) {
+      setDiagramId(savedRecord.id);
+      if (isNewDiagram) {
+        queryClient.invalidateQueries({ queryKey: ['diagrams', user.id] });
+      }
+    }
+
+    clearAutoSave();
+    useDiagramStore.getState().setIsDirty(false);
+
+    if (isCollaborator && diagramId) {
+      toast({ title: t('save.sharedSaved') });
+    } else if (isSharedContext) {
+      toast({
+        title: t('save.savedAsCopy'),
+        description: t('save.savedAsCopyDesc'),
+        duration: 6000,
+      });
+    } else {
+      toast({ title: t('save.savedToCloud') });
+    }
+
+    setSaving(false);
   }, [user, shareToken, saving, onDiagramLimitReached]); // saving included so ref stays current when guard state changes
 
   // PERF-05: Stable ref always pointing to latest save
