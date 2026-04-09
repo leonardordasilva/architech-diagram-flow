@@ -66,6 +66,7 @@ async function upsertSubscription(params: {
   stripeSubscriptionId?: string;
   currentPeriodStart?: number;
   currentPeriodEnd?: number;
+  cancelAtPeriodEnd?: boolean;
 }) {
   const record: Record<string, unknown> = {
     user_id: params.userId,
@@ -78,6 +79,9 @@ async function upsertSubscription(params: {
   if (params.stripeSubscriptionId) record.stripe_subscription_id = params.stripeSubscriptionId;
   if (params.currentPeriodStart) record.current_period_start = new Date(params.currentPeriodStart * 1000).toISOString();
   if (params.currentPeriodEnd) record.current_period_end = new Date(params.currentPeriodEnd * 1000).toISOString();
+  if (params.cancelAtPeriodEnd !== undefined) {
+    record.cancel_at_period_end = params.cancelAtPeriodEnd;
+  }
 
   await serviceSupabase
     .from("subscriptions")
@@ -101,10 +105,6 @@ serve(async (req) => {
   let event: Stripe.Event;
 
   try {
-    // constructEventAsync is the Deno-compatible equivalent of stripe.webhooks.constructEvent().
-    // It cryptographically verifies the Stripe-Signature header using STRIPE_WEBHOOK_SECRET.
-    // Any request with a missing, incorrect, or replayed signature is rejected here — no event
-    // processing occurs before this point.
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err) {
     console.error(JSON.stringify({ fn: 'stripe-webhook', level: 'error', msg: 'signature verification failed', error: String(err) }));
@@ -143,6 +143,7 @@ serve(async (req) => {
           stripeSubscriptionId: subscriptionId,
           currentPeriodStart: periodStart,
           currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: false,
         });
         break;
       }
@@ -173,6 +174,9 @@ serve(async (req) => {
           ? resolveBillingCycle(sub.items.data[0].price)
           : undefined;
 
+        // T3: save cancel_at_period_end flag
+        const cancelAtPeriodEnd = sub.cancel_at_period_end ?? false;
+
         await upsertSubscription({
           userId,
           plan,
@@ -182,6 +186,7 @@ serve(async (req) => {
           stripeSubscriptionId: sub.id,
           currentPeriodStart: sub.current_period_start,
           currentPeriodEnd: sub.current_period_end,
+          cancelAtPeriodEnd,
         });
 
         // saas0003: reconciliar quantity de editores no plano Team
@@ -229,10 +234,10 @@ serve(async (req) => {
           plan: "free",
           status: "canceled",
           stripeSubscriptionId: sub.id,
+          cancelAtPeriodEnd: false,
         });
 
         // saas0003: ao cancelar plano Team, remover subscription_id do workspace
-        // (30-day grace period: membros ainda leem em read-only via RLS — archived depois)
         if (wasTeam) {
           await serviceSupabase
             .from("workspaces")
@@ -242,22 +247,96 @@ serve(async (req) => {
         break;
       }
 
+      // T1: Handle invoice.paid — update current_period_end on subscription renewal
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+
+        const subscriptionId = typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id;
+        if (!subscriptionId) break;
+
+        const customerId = typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id || "";
+
+        const { data: dbSub } = await serviceSupabase
+          .from("subscriptions")
+          .select("user_id, plan")
+          .eq("stripe_customer_id", customerId)
+          .maybeSingle();
+
+        if (!dbSub?.user_id) {
+          console.warn(JSON.stringify({ fn: 'stripe-webhook', msg: 'invoice.paid: no user found', customerId }));
+          break;
+        }
+
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+
+        await serviceSupabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", dbSub.user_id);
+
+        // Ensure profiles.plan is in sync
+        await serviceSupabase
+          .from("profiles")
+          .update({ plan: dbSub.plan })
+          .eq("id", dbSub.user_id);
+
+        console.log(JSON.stringify({ fn: 'stripe-webhook', msg: 'invoice.paid: period updated', userId: dbSub.user_id }));
+        break;
+      }
+
+      // T2: Grace period — downgrade to free on 3rd failed attempt
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id || "";
+        const customerId = typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id || "";
         if (!customerId) break;
 
-        const { data: sub } = await serviceSupabase
+        const { data: dbSub } = await serviceSupabase
           .from("subscriptions")
           .select("user_id")
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
 
-        if (sub?.user_id) {
+        if (!dbSub?.user_id) break;
+
+        const attemptCount = invoice.attempt_count ?? 1;
+        const newPlan = attemptCount >= 3 ? "free" : undefined;
+
+        const updateData: Record<string, unknown> = {
+          status: "past_due",
+          updated_at: new Date().toISOString(),
+        };
+        if (newPlan) {
+          updateData.plan = newPlan;
+        }
+
+        await serviceSupabase
+          .from("subscriptions")
+          .update(updateData)
+          .eq("user_id", dbSub.user_id);
+
+        if (newPlan) {
           await serviceSupabase
-            .from("subscriptions")
-            .update({ status: "past_due", updated_at: new Date().toISOString() })
-            .eq("user_id", sub.user_id);
+            .from("profiles")
+            .update({ plan: "free" })
+            .eq("id", dbSub.user_id);
+
+          console.log(JSON.stringify({
+            fn: 'stripe-webhook',
+            msg: 'invoice.payment_failed: user downgraded after 3 attempts',
+            userId: dbSub.user_id,
+            attemptCount,
+          }));
         }
         break;
       }
