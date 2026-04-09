@@ -450,12 +450,26 @@
     "checkoutProcessingDesc": "Aguarde enquanto confirmamos sua assinatura. Isso pode levar alguns segundos.",
     "subscriptionError": "Não foi possível carregar os detalhes da assinatura.",
     "cancelScheduled": "Sua assinatura está cancelada e expirará em {{date}}. Você manterá acesso até essa data.",
+    "acceptTerms": {
+      "prefix": "Li e aceito os",
+      "and": "e a",
+      "required": "Aceite os termos para continuar."
+    },
     "status": {
       "active": "Ativo",
       "past_due": "Em atraso",
       "canceled": "Cancelado",
       "trialing": "Em avaliação"
     }
+  },
+  "footer": {
+    "terms": "Termos de Uso",
+    "privacy": "Política de Privacidade",
+    "contact": "Contato"
+  },
+  "auth.signupTerms": {
+    "prefix": "Ao criar uma conta, você concorda com os",
+    "and": "e a"
   },
   "account": {
     "title": "Minha Conta",

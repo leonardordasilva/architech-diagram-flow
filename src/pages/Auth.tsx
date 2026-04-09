@@ -409,12 +409,24 @@ export default function AuthPage() {
                 )}
 
                 {view === 'signup' && (
-                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-                    {t('auth.hasAccountPrompt')}{' '}
-                    <button type="button" className="auth-text-btn" onClick={() => setView('login')}>
-                      {t('auth.doLogin')}
-                    </button>
-                  </p>
+                  <>
+                    <p style={{ fontSize: '12px', color: '#475569', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+                      {t('auth.signupTerms.prefix', 'Ao criar uma conta, você concorda com os')}{' '}
+                      <Link to="/terms" target="_blank" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                        {t('footer.terms', 'Termos de Uso')}
+                      </Link>{' '}
+                      {t('auth.signupTerms.and', 'e a')}{' '}
+                      <Link to="/privacy" target="_blank" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                        {t('footer.privacy', 'Política de Privacidade')}
+                      </Link>.
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+                      {t('auth.hasAccountPrompt')}{' '}
+                      <button type="button" className="auth-text-btn" onClick={() => setView('login')}>
+                        {t('auth.doLogin')}
+                      </button>
+                    </p>
+                  </>
                 )}
 
                 {view === 'forgot' && (
