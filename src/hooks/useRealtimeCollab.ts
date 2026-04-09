@@ -27,6 +27,7 @@ interface DiagramUpdatePayload {
   nodes: unknown;
   edges: unknown;
   updated_at?: string;
+  revision_number?: number;
 }
 
 const AVATAR_COLORS = [
