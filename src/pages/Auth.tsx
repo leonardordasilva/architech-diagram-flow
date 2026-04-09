@@ -308,125 +308,126 @@ export default function AuthPage() {
               </button>
             </div>
           ) : (
-          <> 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {/* Email */}
-            <div>
-              <label
-                htmlFor="auth-email"
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#94a3b8',
-                  marginBottom: '7px',
-                }}
-              >
-                {t('auth.email')}
-              </label>
-              <input
-                id="auth-email"
-                className="auth-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('auth.emailPlaceholder')}
-                autoComplete="email"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            {view !== 'forgot' && (
-              <div>
-                <label
-                  htmlFor="auth-password"
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: '#94a3b8',
-                    marginBottom: '7px',
-                  }}
-                >
-                  {t('auth.password')}
-                </label>
-                <div style={{ position: 'relative' }}>
+            <>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* Email */}
+                <div>
+                  <label
+                    htmlFor="auth-email"
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#94a3b8',
+                      marginBottom: '7px',
+                    }}
+                  >
+                    {t('auth.email')}
+                  </label>
                   <input
-                    id="auth-password"
-                    className="auth-input auth-input-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('auth.passwordPlaceholder')}
-                    autoComplete={view === 'login' ? 'current-password' : 'new-password'}
-                    minLength={6}
+                    id="auth-email"
+                    className="auth-input"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t('auth.emailPlaceholder')}
+                    autoComplete="email"
                     required
                   />
+                </div>
+
+                {/* Password */}
+                {view !== 'forgot' && (
+                  <div>
+                    <label
+                      htmlFor="auth-password"
+                      style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#94a3b8',
+                        marginBottom: '7px',
+                      }}
+                    >
+                      {t('auth.password')}
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="auth-password"
+                        className="auth-input auth-input-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={t('auth.passwordPlaceholder')}
+                        autoComplete={view === 'login' ? 'current-password' : 'new-password'}
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="auth-show-pw"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit */}
+                <button type="submit" className="auth-btn" disabled={loading}>
+                  {loading && <Loader2 size={16} className="animate-spin" />}
+                  {submitLabel}
+                </button>
+              </form>
+
+              {/* Secondary links */}
+              <div
+                style={{
+                  marginTop: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                {view === 'login' && (
+                  <>
+                    <button type="button" className="auth-text-btn" onClick={() => setView('forgot')}>
+                      {t('auth.forgotPasswordLink')}
+                    </button>
+                    <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+                      {t('auth.noAccountPrompt')}{' '}
+                      <button type="button" className="auth-text-btn" onClick={() => setView('signup')}>
+                        {t('auth.createAccountBtn')}
+                      </button>
+                    </p>
+                  </>
+                )}
+
+                {view === 'signup' && (
+                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+                    {t('auth.hasAccountPrompt')}{' '}
+                    <button type="button" className="auth-text-btn" onClick={() => setView('login')}>
+                      {t('auth.doLogin')}
+                    </button>
+                  </p>
+                )}
+
+                {view === 'forgot' && (
                   <button
                     type="button"
-                    className="auth-show-pw"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                    className="auth-text-btn"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => setView('login')}
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    <ArrowLeft size={13} />
+                    {t('auth.backToLogin')}
                   </button>
-                </div>
+                )}
               </div>
-            )}
-
-            {/* Submit */}
-            <button type="submit" className="auth-btn" disabled={loading}>
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              {submitLabel}
-            </button>
-          </form>
-
-          {/* Secondary links */}
-          <div
-            style={{
-              marginTop: '20px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            {view === 'login' && (
-              <>
-                <button type="button" className="auth-text-btn" onClick={() => setView('forgot')}>
-                  {t('auth.forgotPasswordLink')}
-                </button>
-                <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-                  {t('auth.noAccountPrompt')}{' '}
-                  <button type="button" className="auth-text-btn" onClick={() => setView('signup')}>
-                    {t('auth.createAccountBtn')}
-                  </button>
-                </p>
-              </>
-            )}
-
-            {view === 'signup' && (
-              <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-                {t('auth.hasAccountPrompt')}{' '}
-                <button type="button" className="auth-text-btn" onClick={() => setView('login')}>
-                  {t('auth.doLogin')}
-                </button>
-              </p>
-            )}
-
-            {view === 'forgot' && (
-              <button
-                type="button"
-                className="auth-text-btn"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                onClick={() => setView('login')}
-              >
-                <ArrowLeft size={13} />
-                {t('auth.backToLogin')}
-              </button>
-            )}
-          </div>
+            </>
           )}
         </div>
 
