@@ -31,6 +31,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export default function AccountModal({ open, onOpenChange }: AccountModalProps) {
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
