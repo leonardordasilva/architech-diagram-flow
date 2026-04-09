@@ -28,4 +28,4 @@ dist-ssr
 .env.example
 .claude
 skills
-documentacao/*
+docs
