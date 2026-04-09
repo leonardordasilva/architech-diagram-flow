@@ -426,6 +426,7 @@ export default function AuthPage() {
               </button>
             )}
           </div>
+          )}
         </div>
 
         {/* Back to landing */}
