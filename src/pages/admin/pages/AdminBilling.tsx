@@ -36,6 +36,7 @@ interface PendingCancel {
 
 export default function AdminBilling() {
   const [pending, setPending] = useState<PendingCancel | null>(null);
+  const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set());
   const { stripeAction } = useAdminMutations();
   const queryClient = useQueryClient();
 
@@ -61,6 +62,8 @@ export default function AdminBilling() {
 
     stripeAction.mutate({ action, subscriptionId: pending.subscriptionId }, {
       onSuccess: async () => {
+        // Optimistically hide the buttons before refetch completes
+        setCancelledIds((prev) => new Set(prev).add(pending!.subscriptionId));
         setPending(null);
         toast({ title: successMsg });
         await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
@@ -103,7 +106,7 @@ export default function AdminBilling() {
           { header: 'Status' },
           { header: 'Próxima cobrança' },
           { header: 'Stripe ID' },
-          { header: '', className: 'w-48' },
+          { header: 'Cancelamento', className: 'w-48' },
         ]}
         isLoading={isLoading}
       >
@@ -143,7 +146,7 @@ export default function AdminBilling() {
             </AdminTableMutedCell>
             <AdminTableMutedCell mono>{s.stripe_subscription_id ?? '—'}</AdminTableMutedCell>
             <AdminTableCell>
-              {s.stripe_subscription_id && s.status === 'active' && !s.cancel_at_period_end && (
+              {s.stripe_subscription_id && s.status === 'active' && !s.cancel_at_period_end && !cancelledIds.has(s.stripe_subscription_id) && (
                 <TooltipProvider delayDuration={300}>
                   <div className="flex gap-1.5">
                     <Tooltip>
