@@ -50,11 +50,12 @@ async function toDiagramRecord(row: DiagramRow): Promise<DiagramRecord> {
   }
 
   // T10: Verify content_hash integrity when available
+  // Use raw (pre-Zod) data for hash to match server-side computation
   if (row.content_hash) {
     try {
       const recomputedHash = await computeContentHash(
-        nodesParsed.data as unknown[],
-        edgesParsed.data as unknown[],
+        rawNodes as unknown[],
+        rawEdges as unknown[],
       );
       if (recomputedHash !== row.content_hash) {
         console.warn(`[diagramService] content_hash mismatch for diagram ${row.id}. Expected: ${row.content_hash}, Got: ${recomputedHash}`);
