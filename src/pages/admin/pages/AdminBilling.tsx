@@ -12,14 +12,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { CreditCard, Loader2, Clock, Ban, RotateCcw, MoreHorizontal, ArrowLeftRight } from 'lucide-react';
+import {
+  CreditCard, Loader2, Clock, Ban, RotateCcw,
+  MoreHorizontal, ArrowLeftRight, Copy, CheckCircle2, AlertCircle,
+} from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
@@ -35,7 +38,8 @@ interface Subscription {
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
   billing_cycle: string | null;
-  email?: string;
+  email?: string | null;
+  avatar_url?: string | null;
 }
 
 type ActionMode = 'soft' | 'immediate' | 'reactivate';
@@ -91,6 +95,85 @@ const CYCLE_LABELS: Record<string, string> = {
   annual: 'Anual',
 };
 
+const PLAN_STYLE: Record<string, { bg: string; text: string; border: string }> = {
+  pro: { bg: 'hsl(220 70% 12%)', text: 'hsl(220 70% 68%)', border: 'hsl(220 70% 22%)' },
+  team: { bg: 'hsl(38 92% 10%)', text: 'hsl(38 92% 62%)', border: 'hsl(38 92% 20%)' },
+};
+
+function PlanBadge({ plan, cycle }: { plan: string; cycle: string | null }) {
+  const style = PLAN_STYLE[plan] ?? { bg: 'hsl(var(--admin-accent-muted))', text: 'hsl(var(--admin-accent))', border: 'hsl(var(--admin-border))' };
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span
+        className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit"
+        style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}` }}
+      >
+        {plan}
+      </span>
+      {cycle && (
+        <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+          {CYCLE_LABELS[cycle] ?? cycle}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function StatusBadge({ status, isSoftCancelled, periodEnd }: { status: string; isSoftCancelled: boolean; periodEnd: string | null }) {
+  const isActive = status === 'active';
+
+  if (isSoftCancelled) {
+    const date = periodEnd ? new Date(periodEnd).toLocaleDateString('pt-BR') : '—';
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide"
+        style={{ background: 'hsl(38 92% 10%)', color: 'hsl(38 92% 62%)', border: '1px solid hsl(38 92% 20%)' }}
+      >
+        <Clock className="h-3 w-3 shrink-0" />
+        Cancela em {date}
+      </span>
+    );
+  }
+
+  if (status === 'canceled') {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide"
+        style={{ background: 'hsl(0 63% 12%)', color: 'hsl(0 84% 62%)', border: '1px solid hsl(0 63% 22%)' }}
+      >
+        <Ban className="h-3 w-3 shrink-0" />
+        Cancelado
+      </span>
+    );
+  }
+
+  if (status === 'past_due') {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide"
+        style={{ background: 'hsl(0 63% 12%)', color: 'hsl(0 84% 62%)', border: '1px solid hsl(0 63% 22%)' }}
+      >
+        <AlertCircle className="h-3 w-3 shrink-0" />
+        Inadimplente
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide"
+      style={{
+        background: isActive ? 'hsl(152 69% 10%)' : 'hsl(var(--admin-border))',
+        color: isActive ? 'hsl(152 69% 55%)' : 'hsl(var(--admin-text-muted))',
+        border: `1px solid ${isActive ? 'hsl(152 69% 18%)' : 'hsl(var(--admin-border))'}`,
+      }}
+    >
+      <CheckCircle2 className="h-3 w-3 shrink-0" />
+      Ativo
+    </span>
+  );
+}
+
 export default function AdminBilling() {
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [softCancelledIds, setSoftCancelledIds] = useState<Set<string>>(new Set());
@@ -110,14 +193,24 @@ export default function AdminBilling() {
         .neq('plan', 'free')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Subscription[];
+
+      const userIds = (data ?? []).map((s) => s.user_id);
+      const { data: profiles } = userIds.length > 0
+        ? await supabase.from('profiles').select('id, email, avatar_url').in('id', userIds)
+        : { data: [] };
+      const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
+
+      return (data ?? []).map((s) => ({
+        ...s,
+        email: profileMap[s.user_id]?.email ?? null,
+        avatar_url: profileMap[s.user_id]?.avatar_url ?? null,
+      })) as Subscription[];
     },
   });
 
   const handleConfirm = () => {
     if (!pending) return;
     const capturedPending = pending;
-
     stripeAction.mutate({ action: ACTION_MAP[capturedPending.mode], subscriptionId: capturedPending.subscriptionId }, {
       onSuccess: async () => {
         setPending(null);
@@ -158,6 +251,11 @@ export default function AdminBilling() {
     setChangePlanTarget({ subscriptionId: subId, currentPlan: s.plan, currentCycle: s.billing_cycle });
   };
 
+  const copyStripeId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    toast({ title: 'ID Stripe copiado' });
+  };
+
   const activeSubs = subs?.filter((s) => s.status === 'active') ?? [];
   const isPending = stripeAction.isPending;
   const dialogConfig = pending ? DIALOG_CONFIG[pending.mode] : null;
@@ -172,7 +270,7 @@ export default function AdminBilling() {
         style={{ background: 'hsl(var(--admin-surface))', border: '1px solid hsl(var(--admin-border))' }}
       >
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: 'linear-gradient(135deg, hsl(152 69% 45%), hsl(190 95% 50%))' }}
         >
           <CreditCard className="h-5 w-5 text-white" />
@@ -188,11 +286,11 @@ export default function AdminBilling() {
 
       <AdminTable
         columns={[
-          { header: 'Plano' },
-          { header: 'Status' },
-          { header: 'Próxima cobrança' },
-          { header: 'Stripe ID' },
-          { header: 'Cancelamento', className: 'w-56' },
+          { header: 'Assinante' },
+          { header: 'Plano / Ciclo', className: 'w-32' },
+          { header: 'Status', className: 'w-44' },
+          { header: 'Próx. cobrança', className: 'w-32' },
+          { header: 'Ações', className: 'w-56' },
           { header: '', className: 'w-10' },
         ]}
         isLoading={isLoading}
@@ -200,7 +298,7 @@ export default function AdminBilling() {
         {subs?.length === 0 ? (
           <tr>
             <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-              Nenhuma subscription.
+              Nenhuma subscription encontrada.
             </td>
           </tr>
         ) : subs?.map((s) => {
@@ -210,48 +308,47 @@ export default function AdminBilling() {
 
           return (
             <AdminTableRow key={s.id}>
+              {/* Assinante */}
               <AdminTableCell>
-                <div className="flex flex-col gap-0.5">
-                  <span
-                    className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider w-fit"
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
                     style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
                   >
-                    {s.plan}
+                    {(s.email ?? s.user_id)[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <span
+                    className="text-xs truncate max-w-[200px]"
+                    style={{ color: 'hsl(var(--admin-text))' }}
+                    title={s.email ?? s.user_id}
+                  >
+                    {s.email ?? <span style={{ color: 'hsl(var(--admin-text-muted))' }}>{s.user_id.slice(0, 12)}…</span>}
                   </span>
-                  {s.billing_cycle && (
-                    <span className="text-[10px]" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                      {CYCLE_LABELS[s.billing_cycle] ?? s.billing_cycle}
-                    </span>
-                  )}
                 </div>
               </AdminTableCell>
+
+              {/* Plano / Ciclo */}
               <AdminTableCell>
-                <span
-                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
-                  style={{
-                    background: isActive ? 'hsl(152 69% 15%)' : 'hsl(var(--admin-border))',
-                    color: isActive ? 'hsl(152 69% 55%)' : 'hsl(var(--admin-text-muted))',
-                  }}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: isActive ? 'hsl(var(--admin-success))' : 'hsl(var(--admin-text-muted))' }}
-                  />
-                  {isSoftCancelled
-                    ? `A ser cancelado em ${s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}`
-                    : s.status}
-                </span>
+                <PlanBadge plan={s.plan} cycle={s.billing_cycle} />
               </AdminTableCell>
+
+              {/* Status */}
+              <AdminTableCell>
+                <StatusBadge status={s.status} isSoftCancelled={!!isSoftCancelled} periodEnd={s.current_period_end} />
+              </AdminTableCell>
+
+              {/* Próxima cobrança */}
               <AdminTableMutedCell>
                 {isActive && !isSoftCancelled && s.current_period_end
                   ? new Date(s.current_period_end).toLocaleDateString('pt-BR')
                   : '—'}
               </AdminTableMutedCell>
-              <AdminTableMutedCell mono>{subId ?? '—'}</AdminTableMutedCell>
+
+              {/* Ações de cancelamento */}
               <AdminTableCell>
                 {subId && isActive && (
                   <TooltipProvider delayDuration={300}>
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1.5 flex-wrap">
                       {isSoftCancelled ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -261,7 +358,7 @@ export default function AdminBilling() {
                               style={{ background: 'hsl(152 69% 10%)', color: 'hsl(152 69% 55%)', border: '1px solid hsl(152 69% 18%)' }}
                             >
                               <RotateCcw className="h-3 w-3 shrink-0" />
-                              Desfazer
+                              Reativar
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
@@ -306,30 +403,37 @@ export default function AdminBilling() {
                 )}
               </AdminTableCell>
 
-              {/* Row actions: change plan */}
+              {/* Menu de ações extras */}
               <AdminTableCell>
-                {subId && isActive && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5">
-                        <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openChangePlan(s, subId)}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5 cursor-pointer">
+                      <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {subId && isActive && (
+                      <DropdownMenuItem onClick={() => openChangePlan(s, subId)} className="cursor-pointer">
                         <ArrowLeftRight className="h-3.5 w-3.5 mr-2" />
                         Alterar plano
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                    )}
+                    {subId && isActive && <DropdownMenuSeparator />}
+                    {subId && (
+                      <DropdownMenuItem onClick={() => copyStripeId(subId)} className="cursor-pointer">
+                        <Copy className="h-3.5 w-3.5 mr-2" />
+                        Copiar ID Stripe
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </AdminTableCell>
             </AdminTableRow>
           );
         })}
       </AdminTable>
 
-      {/* Cancel / Reactivate confirmation dialog */}
+      {/* Cancelar / Reativar — AlertDialog */}
       <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o && !isPending) setPending(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -351,7 +455,7 @@ export default function AdminBilling() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Change plan dialog */}
+      {/* Alterar plano — Dialog */}
       <Dialog open={!!changePlanTarget} onOpenChange={(o) => { if (!o && !isPending) setChangePlanTarget(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -390,11 +494,11 @@ export default function AdminBilling() {
             </div>
 
             {changePlanTarget && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs rounded-md px-3 py-2" style={{ background: 'hsl(var(--admin-surface))', color: 'hsl(var(--admin-text-muted))' }}>
                 Plano atual:{' '}
-                <span className="font-medium capitalize">{changePlanTarget.currentPlan}</span>
+                <span className="font-semibold capitalize" style={{ color: 'hsl(var(--admin-text))' }}>{changePlanTarget.currentPlan}</span>
                 {changePlanTarget.currentCycle && (
-                  <> · {CYCLE_LABELS[changePlanTarget.currentCycle] ?? changePlanTarget.currentCycle}</>
+                  <> · <span className="font-medium">{CYCLE_LABELS[changePlanTarget.currentCycle] ?? changePlanTarget.currentCycle}</span></>
                 )}
               </p>
             )}

@@ -2,14 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useAdminUsers, useAdminMutations } from '../hooks/useAdminQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -17,7 +16,14 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { MoreHorizontal, Search } from 'lucide-react';
+import {
+  MoreHorizontal, Search, Lock, ShieldOff, ShieldCheck, Trash2, LayoutDashboard,
+  CheckCircle2, Ban, Loader2,
+} from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
+import AdminPageHeader from '../components/AdminPageHeader';
+import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell, AdminPagination } from '../components/AdminTable';
 
 const CYCLE_LABELS: Record<string, string> = {
   monthly: 'Mensal',
@@ -25,10 +31,12 @@ const CYCLE_LABELS: Record<string, string> = {
   semiannual: 'Semestral',
   annual: 'Anual',
 };
-import { toast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
-import AdminPageHeader from '../components/AdminPageHeader';
-import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell, AdminPagination } from '../components/AdminTable';
+
+const PLAN_STYLE: Record<string, { bg: string; text: string; border: string }> = {
+  free: { bg: 'hsl(var(--admin-border))', text: 'hsl(var(--admin-text-muted))', border: 'transparent' },
+  pro: { bg: 'hsl(220 70% 12%)', text: 'hsl(220 70% 68%)', border: 'hsl(220 70% 22%)' },
+  team: { bg: 'hsl(38 92% 10%)', text: 'hsl(38 92% 62%)', border: 'hsl(38 92% 20%)' },
+};
 
 export default function AdminUsers() {
   const [page, setPage] = useState(1);
@@ -106,10 +114,10 @@ export default function AdminUsers() {
 
       <AdminTable
         columns={[
-          { header: 'Email' },
-          { header: 'Plano' },
-          { header: 'Cadastro' },
-          { header: 'Status' },
+          { header: 'Usuário' },
+          { header: 'Plano / Ciclo', className: 'w-44' },
+          { header: 'Cadastro', className: 'w-28' },
+          { header: 'Status', className: 'w-28' },
           { header: '', className: 'w-10' },
         ]}
         isLoading={isLoading}
@@ -120,116 +128,139 @@ export default function AdminUsers() {
               Nenhum resultado.
             </td>
           </tr>
-        ) : data?.data?.map((u) => (
-          <AdminTableRow key={u.id}>
-            <AdminTableCell>
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                  style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
-                >
-                  {u.email[0].toUpperCase()}
-                </div>
-                {u.email}
-              </div>
-            </AdminTableCell>
-            <AdminTableCell>
-              {u.subscription_status === 'active' && u.plan !== 'free' ? (
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="inline-block">
-                          <Select defaultValue={u.plan} disabled>
-                            <SelectTrigger
-                              className="w-24 h-7 text-xs border-0 opacity-50 cursor-not-allowed"
-                              style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="free">Free</SelectItem>
-                              <SelectItem value="pro">Pro</SelectItem>
-                              <SelectItem value="team">Team</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </span>
-                        {u.billing_cycle && (
-                          <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                            {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
-                          </span>
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[200px] text-center">
-                      <p>Assinatura Stripe ativa. Use a seção Billing para alterar o plano.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <div className="flex flex-col gap-0.5">
-                  <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
-                    <SelectTrigger
-                      className="w-24 h-7 text-xs border-0"
-                      style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="team">Team</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {u.billing_cycle && (
-                    <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                      {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
-                    </span>
-                  )}
-                </div>
-              )}
-            </AdminTableCell>
-            <AdminTableMutedCell>{new Date(u.created_at).toLocaleDateString('pt-BR')}</AdminTableMutedCell>
-            <AdminTableCell>
-              <span
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
-                style={{
-                  background: u.suspended_at ? 'hsl(0 63% 15%)' : 'hsl(152 69% 15%)',
-                  color: u.suspended_at ? 'hsl(0 84% 65%)' : 'hsl(152 69% 55%)',
-                }}
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: u.suspended_at ? 'hsl(0 84% 60%)' : 'hsl(var(--admin-success))' }}
-                />
-                {u.suspended_at ? 'Suspenso' : 'Ativo'}
-              </span>
-            </AdminTableCell>
-            <AdminTableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5">
-                    <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleSuspend(u.id, !u.suspended_at)}>
-                    {u.suspended_at ? 'Reativar' : 'Suspender'}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to={`/admin/diagrams?userId=${u.id}`}>Ver diagramas</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
+        ) : data?.data?.map((u) => {
+          const isStripeLocked = u.subscription_status === 'active' && u.plan !== 'free';
+          const planStyle = PLAN_STYLE[u.plan] ?? PLAN_STYLE.free;
+
+          return (
+            <AdminTableRow key={u.id}>
+              {/* Usuário */}
+              <AdminTableCell>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                    style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
                   >
-                    Deletar conta
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </AdminTableCell>
-          </AdminTableRow>
-        ))}
+                    {u.email[0].toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs truncate" style={{ color: 'hsl(var(--admin-text))' }}>
+                      {u.email}
+                    </span>
+                  </div>
+                </div>
+              </AdminTableCell>
+
+              {/* Plano / Ciclo */}
+              <AdminTableCell>
+                {isStripeLocked ? (
+                  /* Plano gerenciado pelo Stripe — read-only com cadeado */
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col gap-1 w-fit">
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider cursor-default"
+                            style={{ background: planStyle.bg, color: planStyle.text, border: `1px solid ${planStyle.border}` }}
+                          >
+                            <Lock className="h-2.5 w-2.5 shrink-0" />
+                            {u.plan}
+                          </span>
+                          {u.billing_cycle && (
+                            <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                              {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
+                            </span>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[210px] text-center">
+                        <p>Assinatura Stripe ativa. Use a seção <strong>Billing</strong> para alterar o plano.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  /* Plano editável diretamente */
+                  <div className="flex flex-col gap-1">
+                    <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
+                      <SelectTrigger
+                        className="w-28 h-7 text-xs border-0 cursor-pointer"
+                        style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                        <SelectItem value="team">Team</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {u.billing_cycle && (
+                      <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                        {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </AdminTableCell>
+
+              {/* Cadastro */}
+              <AdminTableMutedCell>
+                {new Date(u.created_at).toLocaleDateString('pt-BR')}
+              </AdminTableMutedCell>
+
+              {/* Status */}
+              <AdminTableCell>
+                <span
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide"
+                  style={{
+                    background: u.suspended_at ? 'hsl(0 63% 12%)' : 'hsl(152 69% 10%)',
+                    color: u.suspended_at ? 'hsl(0 84% 62%)' : 'hsl(152 69% 55%)',
+                    border: `1px solid ${u.suspended_at ? 'hsl(0 63% 22%)' : 'hsl(152 69% 18%)'}`,
+                  }}
+                >
+                  {u.suspended_at
+                    ? <Ban className="h-3 w-3 shrink-0" />
+                    : <CheckCircle2 className="h-3 w-3 shrink-0" />
+                  }
+                  {u.suspended_at ? 'Suspenso' : 'Ativo'}
+                </span>
+              </AdminTableCell>
+
+              {/* Ações */}
+              <AdminTableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5 cursor-pointer">
+                      <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleSuspend(u.id, !u.suspended_at)} className="cursor-pointer">
+                      {u.suspended_at
+                        ? <><ShieldCheck className="h-3.5 w-3.5 mr-2 text-emerald-500" />Reativar conta</>
+                        : <><ShieldOff className="h-3.5 w-3.5 mr-2 text-amber-500" />Suspender conta</>
+                      }
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link to={`/admin/diagrams?userId=${u.id}`}>
+                        <LayoutDashboard className="h-3.5 w-3.5 mr-2" />
+                        Ver diagramas
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive cursor-pointer focus:text-destructive"
+                      onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Deletar conta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </AdminTableCell>
+            </AdminTableRow>
+          );
+        })}
       </AdminTable>
 
       <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -239,7 +270,8 @@ export default function AdminUsers() {
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar conta permanentemente</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação é irreversível. Todos os dados do usuário serão removidos. Digite o email <strong>{deleteTarget?.email}</strong> para confirmar.
+              Esta ação é irreversível. Todos os dados do usuário serão removidos. Digite o email{' '}
+              <strong>{deleteTarget?.email}</strong> para confirmar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Input
@@ -254,7 +286,10 @@ export default function AdminUsers() {
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteUser.isPending ? 'Deletando...' : 'Confirmar deleção'}
+              {deleteUser.isPending
+                ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Deletando...</>
+                : <><Trash2 className="mr-2 h-3.5 w-3.5" />Confirmar deleção</>
+              }
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
