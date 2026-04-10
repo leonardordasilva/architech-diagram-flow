@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Zap, Crown, Star, ExternalLink } from 'lucide-react';
+import { Loader2, Zap, Crown, Star, ExternalLink, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,10 +29,28 @@ const CYCLE_LABEL_KEYS: Record<string, string> = {
   annual: 'pricing.cycleAnnual',
 };
 
-const PLAN_ICON_CLASS: Record<string, string> = {
-  free: 'text-muted-foreground',
-  pro: 'text-blue-500',
-  team: 'text-yellow-500',
+const PLAN_ACCENT: Record<string, string> = {
+  free: 'border-border',
+  pro: 'border-blue-500/50',
+  team: 'border-yellow-500/50',
+};
+
+const PLAN_ICON_BG: Record<string, string> = {
+  free: 'bg-muted text-muted-foreground',
+  pro: 'bg-blue-500/10 text-blue-500',
+  team: 'bg-yellow-500/10 text-yellow-500',
+};
+
+const PLAN_FEATURES: Record<string, string[]> = {
+  free: ['billing.feature.free1', 'billing.feature.free2', 'billing.feature.free3'],
+  pro: ['billing.feature.pro1', 'billing.feature.pro2', 'billing.feature.pro3'],
+  team: ['billing.feature.team1', 'billing.feature.team2', 'billing.feature.team3'],
+};
+
+const PLAN_FEATURE_DEFAULTS: Record<string, string[]> = {
+  free: ['3 diagramas', '25 nós por diagrama', 'Exportação PNG e JSON'],
+  pro: ['Diagramas ilimitados', '150 nós por diagrama', 'Colaboração e exportações premium'],
+  team: ['Diagramas ilimitados', 'Nós ilimitados', 'Colaboração em tempo real'],
 };
 
 async function fetchSubscription(userId: string) {
@@ -164,11 +182,20 @@ export default function BillingModal({
 
   const plan = planLimits.plan;
   const PlanIcon = PLAN_ICON[plan] || Star;
-  const planIconClass = PLAN_ICON_CLASS[plan] || '';
+  const planAccent = PLAN_ACCENT[plan] || 'border-border';
+  const planIconBg = PLAN_ICON_BG[plan] || '';
   const diagramLimit = planLimits.maxDiagrams;
   const renewalDate = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString()
     : null;
+
+  const usagePercent = diagramLimit !== null
+    ? Math.min(100, (diagramCount / diagramLimit) * 100)
+    : 0;
+  const isAtLimit = diagramLimit !== null && diagramCount >= diagramLimit;
+
+  const features = PLAN_FEATURES[plan] ?? [];
+  const featureDefaults = PLAN_FEATURE_DEFAULTS[plan] ?? [];
 
   return (
     <>
@@ -176,6 +203,9 @@ export default function BillingModal({
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('billing.title')}</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {t('billing.subtitle', 'Gerencie seu plano e acompanhe seu uso')}
+            </DialogDescription>
           </DialogHeader>
 
           {checkoutProcessing && (
@@ -189,42 +219,67 @@ export default function BillingModal({
           )}
 
           {/* Current plan card */}
-          <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <PlanIcon className={`h-6 w-6 ${planIconClass}`} />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('billing.currentPlan')}</p>
-                <p className="font-bold text-xl">{t(`pricing.${plan}`)}</p>
+          <div className={`rounded-xl border-2 bg-card p-5 ${planAccent}`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className={`rounded-lg p-2 ${planIconBg}`}>
+                  <PlanIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider leading-none mb-1">
+                    {t('billing.currentPlan')}
+                  </p>
+                  <p className="font-bold text-lg leading-none">{t(`pricing.${plan}`)}</p>
+                </div>
               </div>
-              {subscription && (
-                <span className={`ml-auto text-xs font-medium rounded-full px-2.5 py-1 ${
-                  subscription.status === 'active' ? 'bg-green-500/10 text-green-600' :
-                  subscription.status === 'past_due' ? 'bg-red-500/10 text-red-600' :
-                  'bg-muted text-muted-foreground'
-                }`}>
-                  {t(`billing.status.${subscription.status}`, subscription.status)}
-                </span>
-              )}
-              {subscriptionError && (
-                <span className="ml-auto text-xs text-muted-foreground">{t('billing.subscriptionError')}</span>
-              )}
+
+              <div className="flex flex-col items-end gap-1">
+                {subscription && (
+                  <span className={`text-xs font-medium rounded-full px-2.5 py-1 ${
+                    subscription.status === 'active'
+                      ? 'bg-green-500/10 text-green-600'
+                      : subscription.status === 'past_due'
+                      ? 'bg-red-500/10 text-red-600'
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {t(`billing.status.${subscription.status}`, subscription.status)}
+                  </span>
+                )}
+                {subscriptionError && (
+                  <span className="text-xs text-muted-foreground">{t('billing.subscriptionError')}</span>
+                )}
+              </div>
             </div>
 
+            {/* Plan features */}
+            {featureDefaults.length > 0 && (
+              <ul className="space-y-1.5 mb-4">
+                {features.map((key, i) => (
+                  <li key={key} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    {t(key, featureDefaults[i])}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             {subscription?.billing_cycle && (
-              <p className="text-sm text-muted-foreground mb-1">
-                {t('billing.billingCycle')}: <span className="font-medium">
+              <p className="text-xs text-muted-foreground mb-1">
+                {t('billing.billingCycle')}:{' '}
+                <span className="font-medium text-foreground">
                   {t(CYCLE_LABEL_KEYS[subscription.billing_cycle] ?? subscription.billing_cycle, subscription.billing_cycle)}
                 </span>
               </p>
             )}
             {renewalDate && (
-              <p className="text-sm text-muted-foreground mb-1">
-                {t('billing.renewsOn')}: <span className="font-medium">{renewalDate}</span>
+              <p className="text-xs text-muted-foreground mb-3">
+                {t('billing.renewsOn')}:{' '}
+                <span className="font-medium text-foreground">{renewalDate}</span>
               </p>
             )}
 
             {subscription?.cancel_at_period_end && (
-              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400 mb-4">
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400 mb-3">
                 {t('billing.cancelScheduled', {
                   date: subscription.current_period_end
                     ? new Date(subscription.current_period_end).toLocaleDateString()
@@ -233,15 +288,15 @@ export default function BillingModal({
               </div>
             )}
 
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               {plan !== 'free' ? (
-                <Button variant="outline" size="sm" onClick={openPortal} disabled={portalLoading} aria-busy={portalLoading} className="gap-2">
-                  {portalLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                <Button variant="outline" size="sm" onClick={openPortal} disabled={portalLoading} aria-busy={portalLoading} className="gap-2 cursor-pointer">
+                  {portalLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
                   {t('billing.manageSubscription')}
                 </Button>
               ) : (
-                <Button size="sm" onClick={() => setUpgradeOpen(true)} className="gap-2">
-                  <Zap className="h-3 w-3" />
+                <Button size="sm" onClick={() => setUpgradeOpen(true)} className="gap-2 cursor-pointer">
+                  <Zap className="h-3.5 w-3.5" />
                   {t('billing.upgradePlan')}
                 </Button>
               )}
@@ -249,33 +304,40 @@ export default function BillingModal({
           </div>
 
           {/* Usage */}
-          <div className="rounded-xl border bg-card p-6">
-            <h2 className="font-semibold mb-4">{t('billing.usage')}</h2>
+          <div className="rounded-xl border bg-card p-5">
+            <h2 className="font-semibold text-sm mb-4">{t('billing.usage')}</h2>
 
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
+            <div className="mb-5">
+              <div className="flex justify-between text-sm mb-2">
                 <span className="text-muted-foreground">{t('billing.diagrams')}</span>
-                <span className="font-medium">
+                <span className={`font-semibold tabular-nums ${isAtLimit ? 'text-destructive' : 'text-foreground'}`}>
                   {diagramCount}
                   {diagramLimit !== null ? ` / ${diagramLimit}` : ` / ${t('billing.unlimited')}`}
                 </span>
               </div>
               {diagramLimit !== null && (
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${
-                      diagramCount >= diagramLimit ? 'bg-destructive' : 'bg-primary'
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      isAtLimit ? 'bg-destructive' : usagePercent > 75 ? 'bg-yellow-500' : 'bg-primary'
                     }`}
-                    style={{ width: `${Math.min(100, (diagramCount / diagramLimit) * 100)}%` }}
+                    style={{ width: `${usagePercent}%` }}
                   />
                 </div>
               )}
+              {isAtLimit && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {t('billing.diagramLimitReached', 'Limite atingido. Faça upgrade para criar mais diagramas.')}
+                </p>
+              )}
             </div>
 
-            <div className="text-sm text-muted-foreground">
-              {t('billing.nodesPerDiagram')}:{' '}
-              <span className="font-medium text-foreground">
-                {planLimits.maxNodesPerDiagram !== null ? planLimits.maxNodesPerDiagram : t('billing.unlimited')}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t('billing.nodesPerDiagram')}</span>
+              <span className="font-semibold text-foreground tabular-nums">
+                {planLimits.maxNodesPerDiagram !== null
+                  ? planLimits.maxNodesPerDiagram
+                  : t('billing.unlimited')}
               </span>
             </div>
           </div>

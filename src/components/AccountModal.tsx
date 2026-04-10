@@ -15,6 +15,7 @@ import {
 import { Mail, KeyRound, LogOut, Camera, Loader2, X, Languages, Trash2, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/utils/getErrorMessage';
@@ -62,7 +63,6 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
   }, [open, user]);
 
   const handleSignOut = async () => {
-    // T5: Check for unsaved changes before signing out
     const isDirty = useDiagramStore.getState().isDirty;
     if (isDirty) {
       setShowUnsavedConfirm(true);
@@ -141,7 +141,6 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
         .from(AVATAR_BUCKET)
         .getPublicUrl(path);
 
-      // Bust cache with timestamp
       const urlWithBust = `${publicUrl}?t=${Date.now()}`;
 
       const { error: updateError } = await supabase
@@ -157,27 +156,29 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
       toast({ title: t('account.avatarUploadError'), description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setUploading(false);
-      // Reset input so same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
+  const userInitial = user?.email?.[0]?.toUpperCase() ?? '?';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t('account.title')}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-sm p-0 overflow-hidden">
+        {/* Profile header */}
+        <div className="bg-gradient-to-b from-muted/60 to-muted/20 px-6 pt-6 pb-5">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-base">{t('account.title')}</DialogTitle>
+          </DialogHeader>
 
-        <div className="rounded-xl border bg-card p-6">
-          {/* Avatar */}
-          <div className="flex flex-col items-center mb-6">
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
             <button
               type="button"
               onClick={handleAvatarClick}
               disabled={uploading}
               aria-busy={uploading}
-              className="relative group h-20 w-20 rounded-full overflow-hidden border-2 border-border bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="relative group h-16 w-16 shrink-0 rounded-full overflow-hidden border-2 border-border bg-muted cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('account.changeAvatar')}
             >
               {avatarUrl ? (
@@ -187,121 +188,135 @@ export default function AccountModal({ open, onOpenChange }: AccountModalProps) 
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-muted-foreground uppercase">
-                  {user?.email?.[0] ?? '?'}
+                <span className="flex h-full w-full items-center justify-center text-xl font-bold text-muted-foreground">
+                  {userInitial}
                 </span>
               )}
-              {/* Hover overlay */}
-              <span className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 {uploading
-                  ? <Loader2 className="h-5 w-5 text-white animate-spin" />
-                  : <Camera className="h-5 w-5 text-white" />}
+                  ? <Loader2 className="h-4 w-4 text-white animate-spin" />
+                  : <Camera className="h-4 w-4 text-white" />}
               </span>
             </button>
-            <p className="mt-2 text-xs text-muted-foreground">{t('account.changeAvatar')}</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ALLOWED_TYPES.join(',')}
-              className="hidden"
-              onChange={handleFileChange}
-            />
+
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-foreground truncate">
+                {user?.email?.split('@')[0]}
+              </p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground truncate mt-0.5">
+                <Mail className="h-3 w-3 shrink-0" />
+                {user?.email}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground/70">{t('account.changeAvatar')}</p>
+            </div>
           </div>
 
-          {/* Email */}
-          <p className="flex items-center gap-2 text-sm text-muted-foreground mb-6 justify-center">
-            <Mail className="h-3.5 w-3.5 shrink-0" />
-            {user?.email}
-          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ALLOWED_TYPES.join(',')}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
 
-          <div className="space-y-3">
-            {showPasswordForm ? (
-              <form onSubmit={handleResetPassword} className="space-y-3 rounded-lg border bg-muted/40 p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium">{t('account.resetPassword')}</span>
-                  <button
-                    type="button"
-                    onClick={() => { setShowPasswordForm(false); setNewPassword(''); setConfirmPassword(''); }}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label={t('common.cancel')}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="new-password" className="text-xs">{t('resetPassword.newPassword')}</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    minLength={6}
-                    required
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="confirm-password" className="text-xs">{t('resetPassword.confirmPassword')}</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    minLength={6}
-                    required
-                  />
-                </div>
-                <Button type="submit" size="sm" className="w-full" disabled={resetLoading} aria-busy={resetLoading}>
-                  {resetLoading ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
-                  {t('resetPassword.submit')}
-                </Button>
-              </form>
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-2"
-                onClick={() => setShowPasswordForm(true)}
-              >
-                <KeyRound className="h-4 w-4" />
-                {t('account.resetPassword')}
+        <div className="px-6 py-4 space-y-1">
+          {/* Password section */}
+          {showPasswordForm ? (
+            <form onSubmit={handleResetPassword} className="space-y-3 rounded-lg border bg-muted/40 p-4 mb-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{t('account.resetPassword')}</span>
+                <button
+                  type="button"
+                  onClick={() => { setShowPasswordForm(false); setNewPassword(''); setConfirmPassword(''); }}
+                  className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  aria-label={t('common.cancel')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="new-password" className="text-xs">{t('resetPassword.newPassword')}</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={6}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="confirm-password" className="text-xs">{t('resetPassword.confirmPassword')}</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={6}
+                  required
+                />
+              </div>
+              <Button type="submit" size="sm" className="w-full" disabled={resetLoading} aria-busy={resetLoading}>
+                {resetLoading ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+                {t('resetPassword.submit')}
               </Button>
-            )}
-
-            {/* Admin access — only visible for admin users */}
-            {isAdmin && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-2"
-                onClick={() => { onOpenChange(false); navigate('/admin'); }}
-              >
-                <Shield className="h-4 w-4" />
-                {t('account.adminArea', 'Área Administrativa')}
-              </Button>
-            )}
-
+            </form>
+          ) : (
             <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={() => i18n.changeLanguage(i18n.language === 'pt-BR' ? 'en' : 'pt-BR')}
+              variant="ghost"
+              className="w-full justify-start gap-3 h-10 px-3 text-sm font-normal cursor-pointer"
+              onClick={() => setShowPasswordForm(true)}
             >
-              <Languages className="h-4 w-4" />
-              {i18n.language === 'pt-BR' ? 'Switch to English' : 'Mudar para Português'}
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
+              {t('account.resetPassword')}
             </Button>
+          )}
 
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-normal cursor-pointer"
+            onClick={() => i18n.changeLanguage(i18n.language === 'pt-BR' ? 'en' : 'pt-BR')}
+          >
+            <Languages className="h-4 w-4 text-muted-foreground" />
+            {i18n.language === 'pt-BR' ? 'Switch to English' : 'Mudar para Português'}
+          </Button>
+
+          {isAdmin && (
             <Button
-              variant="destructive"
-              className="w-full justify-start gap-2"
-              onClick={handleSignOut}
+              variant="ghost"
+              className="w-full justify-start gap-3 h-10 px-3 text-sm font-normal cursor-pointer"
+              onClick={() => { onOpenChange(false); navigate('/admin'); }}
             >
-              <LogOut className="h-4 w-4" />
-              {t('account.signOut')}
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              {t('account.adminArea', 'Área Administrativa')}
             </Button>
+          )}
 
+          <Separator className="my-2" />
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-normal text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4" />
+            {t('account.signOut')}
+          </Button>
+        </div>
+
+        {/* Danger zone */}
+        <div className="px-6 pb-5">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3">
+            <p className="text-xs font-semibold text-destructive/80 uppercase tracking-wider mb-2">
+              {t('account.dangerZone', 'Zona de Perigo')}
+            </p>
             <Button
-              variant="outline"
-              className="w-full justify-start gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              variant="ghost"
+              className="w-full justify-start gap-3 h-9 px-0 text-sm font-normal text-destructive hover:text-destructive hover:bg-transparent cursor-pointer"
               onClick={() => setShowDeleteConfirm(true)}
             >
               <Trash2 className="h-4 w-4" />
