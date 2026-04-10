@@ -69,6 +69,7 @@
     "signupTitle": "Create your account",
     "recoverTitle": "Recover your password",
     "unknownError": "An unexpected error occurred. Please try again.",
+    "emailNotRegistered": "We couldn't find an account with this email. Please check the address or create an account.",
     "hidePassword": "Hide password",
     "showPassword": "Show password"
   },

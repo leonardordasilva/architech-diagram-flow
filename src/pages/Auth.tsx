@@ -27,6 +27,17 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (view === 'forgot') {
+        // Check if e-mail exists in profiles before sending recovery link
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email.trim().toLowerCase())
+          .limit(1);
+        if (profileError) throw profileError;
+        if (!profiles || profiles.length === 0) {
+          toast({ title: t('common.error'), description: t('auth.emailNotRegistered'), variant: 'destructive' });
+          return;
+        }
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
