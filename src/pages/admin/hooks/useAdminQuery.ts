@@ -14,7 +14,8 @@ export interface AdminUser {
   created_at: string;
   suspended_at: string | null;
   avatar_url: string | null;
-  subscription_status?: string;
+  subscription_status: string | null;
+  stripe_subscription_id: string | null;
 }
 
 export interface AdminDiagram {

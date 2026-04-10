@@ -60,7 +60,21 @@ Deno.serve(async (req) => {
       q = q.order('created_at', { ascending: false }).range(offset, offset + pageSize - 1)
       const { data, count, error } = await q
       if (error) throw error
-      return new Response(JSON.stringify({ data, count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+      // Enrich with subscription info so the frontend can detect Stripe-managed plans
+      const userIds = (data ?? []).map((u: any) => u.id)
+      const { data: subs } = userIds.length > 0
+        ? await supabase.from('subscriptions').select('user_id, status, stripe_subscription_id').in('user_id', userIds)
+        : { data: [] }
+      const subMap = Object.fromEntries((subs ?? []).map((s: any) => [s.user_id, s]))
+
+      const enriched = (data ?? []).map((u: any) => ({
+        ...u,
+        subscription_status: subMap[u.id]?.status ?? null,
+        stripe_subscription_id: subMap[u.id]?.stripe_subscription_id ?? null,
+      }))
+
+      return new Response(JSON.stringify({ data: enriched, count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (resource === 'diagrams') {
