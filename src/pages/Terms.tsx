@@ -449,8 +449,8 @@ export default function Terms() {
                 <div className="pl-11 text-sm leading-relaxed text-muted-foreground space-y-3">
                   <p>
                     {isPt
-                      ? 'Para dúvidas sobre estes termos, entre em contato pelos canais abaixo:'
-                      : 'For questions about these terms, contact us through the channels below:'}
+                      ? 'Para dúvidas sobre estes termos, entre em contato pelo e-mail:'
+                      : 'For questions about these terms, contact us at:'}
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                     <a
