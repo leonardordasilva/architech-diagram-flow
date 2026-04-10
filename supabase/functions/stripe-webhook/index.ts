@@ -67,6 +67,8 @@ async function upsertSubscription(params: {
   currentPeriodStart?: number;
   currentPeriodEnd?: number;
   cancelAtPeriodEnd?: boolean;
+  /** When true, explicitly nulls out billing_cycle and period dates (used on cancellation) */
+  clearBillingData?: boolean;
 }) {
   const record: Record<string, unknown> = {
     user_id: params.userId,
@@ -74,11 +76,17 @@ async function upsertSubscription(params: {
     status: params.status,
     updated_at: new Date().toISOString(),
   };
-  if (params.billingCycle) record.billing_cycle = params.billingCycle;
+  if (params.clearBillingData) {
+    record.billing_cycle = null;
+    record.current_period_start = null;
+    record.current_period_end = null;
+  } else {
+    if (params.billingCycle) record.billing_cycle = params.billingCycle;
+    if (params.currentPeriodStart) record.current_period_start = new Date(params.currentPeriodStart * 1000).toISOString();
+    if (params.currentPeriodEnd) record.current_period_end = new Date(params.currentPeriodEnd * 1000).toISOString();
+  }
   if (params.stripeCustomerId) record.stripe_customer_id = params.stripeCustomerId;
   if (params.stripeSubscriptionId) record.stripe_subscription_id = params.stripeSubscriptionId;
-  if (params.currentPeriodStart) record.current_period_start = new Date(params.currentPeriodStart * 1000).toISOString();
-  if (params.currentPeriodEnd) record.current_period_end = new Date(params.currentPeriodEnd * 1000).toISOString();
   if (params.cancelAtPeriodEnd !== undefined) {
     record.cancel_at_period_end = params.cancelAtPeriodEnd;
   }
@@ -235,6 +243,7 @@ serve(async (req) => {
           status: "canceled",
           stripeSubscriptionId: sub.id,
           cancelAtPeriodEnd: false,
+          clearBillingData: true,
         });
 
         // saas0003: ao cancelar plano Team, remover subscription_id do workspace

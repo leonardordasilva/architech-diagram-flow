@@ -234,7 +234,7 @@ export default function BillingModal({
               </div>
 
               <div className="flex flex-col items-end gap-1">
-                {subscription && (
+                {subscription && plan !== 'free' && (
                   <span className={`text-xs font-medium rounded-full px-2.5 py-1 ${
                     subscription.status === 'active'
                       ? 'bg-green-500/10 text-green-600'
@@ -263,7 +263,7 @@ export default function BillingModal({
               </ul>
             )}
 
-            {subscription?.billing_cycle && (
+            {plan !== 'free' && subscription?.billing_cycle && (
               <p className="text-xs text-muted-foreground mb-1">
                 {t('billing.billingCycle')}:{' '}
                 <span className="font-medium text-foreground">
@@ -271,7 +271,7 @@ export default function BillingModal({
                 </span>
               </p>
             )}
-            {renewalDate && (
+            {plan !== 'free' && renewalDate && (
               <p className="text-xs text-muted-foreground mb-3">
                 {t('billing.renewsOn')}:{' '}
                 <span className="font-medium text-foreground">{renewalDate}</span>

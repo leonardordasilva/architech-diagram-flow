@@ -18,10 +18,24 @@ Deno.serve(async (req) => {
 
   const { action, subscriptionId } = await req.json()
 
+  // Immediate cancellation — user loses access now
   if (action === 'cancel-subscription' && subscriptionId) {
     const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${stripeKey}` },
+    })
+    const result = await res.json()
+    if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
+    return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
+  // Soft cancel — user keeps access until end of current billing period
+  if (action === 'cancel-at-period-end' && subscriptionId) {
+    const body = new URLSearchParams({ cancel_at_period_end: 'true' })
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${stripeKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
     })
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
