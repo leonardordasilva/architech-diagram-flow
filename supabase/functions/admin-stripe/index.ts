@@ -16,6 +16,9 @@ Deno.serve(async (req) => {
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
   if (!stripeKey) return new Response(JSON.stringify({ error: 'Stripe not configured' }), { status: 500, headers: corsHeaders })
 
+  // Service role client to update the DB directly after Stripe calls
+  const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
   const { action, subscriptionId } = await req.json()
 
   // Immediate cancellation — user loses access now
@@ -26,6 +29,20 @@ Deno.serve(async (req) => {
     })
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
+
+    // Sync DB immediately without waiting for webhook
+    await serviceClient
+      .from('subscriptions')
+      .update({
+        status: 'canceled',
+        plan: 'free',
+        cancel_at_period_end: false,
+        billing_cycle: null,
+        current_period_start: null,
+        current_period_end: null,
+      })
+      .eq('stripe_subscription_id', subscriptionId)
+
     return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
@@ -39,6 +56,13 @@ Deno.serve(async (req) => {
     })
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
+
+    // Sync DB immediately without waiting for webhook
+    await serviceClient
+      .from('subscriptions')
+      .update({ cancel_at_period_end: true })
+      .eq('stripe_subscription_id', subscriptionId)
+
     return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
@@ -52,6 +76,13 @@ Deno.serve(async (req) => {
     })
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
+
+    // Sync DB immediately without waiting for webhook
+    await serviceClient
+      .from('subscriptions')
+      .update({ cancel_at_period_end: false })
+      .eq('stripe_subscription_id', subscriptionId)
+
     return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
