@@ -29,6 +29,28 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const handleResendConfirmation = async () => {
+    if (!email) return;
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      toast({ title: t('auth.emailSent'), description: t('auth.resendConfirmationSuccess') });
+      setShowResendConfirmation(false);
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      if (msg.includes('once every 60 seconds')) {
+        toast({ title: t('common.error'), description: t('auth.rateLimited'), variant: 'destructive' });
+      } else {
+        toast({ title: t('common.error'), description: t('auth.unknownError'), variant: 'destructive' });
+      }
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
