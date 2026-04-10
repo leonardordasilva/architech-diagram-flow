@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowUp, ShieldCheck, ChevronDown, X } from 'lucide-react';
@@ -27,6 +27,11 @@ export default function Privacy() {
   const [tocOpen, setTocOpen]         = useState(false);
   const isClickScrolling = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useLayoutEffect(() => {
+    setActiveId('s1');
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
 
   useEffect(() => {
     let mounted = true;
