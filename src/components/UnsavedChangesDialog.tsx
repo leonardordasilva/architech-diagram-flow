@@ -27,12 +27,12 @@ export default function UnsavedChangesDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{t('unsavedDialog.title')}</AlertDialogTitle>
           <AlertDialogDescription>{t('unsavedDialog.description')}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
           <AlertDialogCancel>{t('unsavedDialog.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
