@@ -131,14 +131,21 @@ export const useDiagramStore = create<DiagramStore>()(
         if (!changes || changes.length === 0) return;
         const current = get().nodes;
         const updated = applyNodeChanges(changes, current) as DiagramNode[];
-        if (updated !== current) set({ nodes: updated, isDirty: true });
+        if (updated !== current) {
+          // Only mark dirty for meaningful changes (not internal ReactFlow dimension/select updates)
+          const hasMeaningfulChange = changes.some((c) => c.type !== 'dimensions' && c.type !== 'select');
+          set({ nodes: updated, ...(hasMeaningfulChange ? { isDirty: true } : {}) });
+        }
       },
 
       onEdgesChange: (changes) => {
         if (!changes || changes.length === 0) return;
         const current = get().edges;
         const updated = applyEdgeChanges(changes, current) as DiagramEdge[];
-        if (updated !== current) set({ edges: updated, isDirty: true });
+        if (updated !== current) {
+          const hasMeaningfulChange = changes.some((c) => c.type !== 'select');
+          set({ edges: updated, ...(hasMeaningfulChange ? { isDirty: true } : {}) });
+        }
       },
 
       // FUNC-03 / PERF-02: onConnect reads nodes inside set() callback, validates with canConnect
