@@ -69,6 +69,7 @@
     "signupTitle": "Crie sua conta",
     "recoverTitle": "Recupere sua senha",
     "unknownError": "Ocorreu um erro inesperado. Tente novamente.",
+    "emailNotRegistered": "Não encontramos uma conta com este e-mail. Verifique o endereço ou crie uma conta.",
     "hidePassword": "Ocultar senha",
     "showPassword": "Mostrar senha"
   },
