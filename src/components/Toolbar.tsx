@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { NodeType } from '@/types/diagram';
@@ -182,19 +182,24 @@ function Toolbar({
       <ToolbarButton icon={Box} label={t('toolbar.service')} onClick={() => onAddNode('service')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick} />
 
       <ToolbarDropdown icon={Database} label={t('toolbar.database')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
+        <DropdownMenuLabel className="text-xs text-muted-foreground">Relacional</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => onAddNode('database', 'PostgreSQL')}>PostgreSQL</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddNode('database', 'MySQL')}>MySQL</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'MariaDB')}>MariaDB</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddNode('database', 'SQL Server')}>SQL Server</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddNode('database', 'Oracle')}>Oracle</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAddNode('database', 'MariaDB')}>MariaDB</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'CockroachDB')}>CockroachDB</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">NoSQL</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => onAddNode('database', 'MongoDB')}>MongoDB</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAddNode('database', 'Redis')}>Redis</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddNode('database', 'DynamoDB')}>DynamoDB</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddNode('database', 'Cassandra')}>Cassandra</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAddNode('database', 'Elasticsearch')}>Elasticsearch</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAddNode('database', 'Memcached')}>Memcached</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAddNode('database', 'Firebase')}>Firebase</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAddNode('database', 'CockroachDB')}>CockroachDB</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">Cache / Busca</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'Redis')}>Redis</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'Memcached')}>Memcached</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAddNode('database', 'Elasticsearch')}>Elasticsearch</DropdownMenuItem>
       </ToolbarDropdown>
 
       <ToolbarDropdown icon={Mail} label={t('toolbar.queue')} actionsDisabled={actionsDisabled} onDisabledClick={handleDisabledClick}>
