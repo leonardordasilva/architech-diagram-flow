@@ -25,10 +25,12 @@ export default function Privacy() {
   const [activeId, setActiveId]       = useState('s1');
   const [showBackTop, setShowBackTop] = useState(false);
   const [tocOpen, setTocOpen]         = useState(false);
+  const isClickScrolling = useState({ current: false })[0];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
+        if (isClickScrolling.current) return;
         entries.forEach((entry) => {
           if (entry.isIntersecting) setActiveId(entry.target.id);
         });
@@ -49,8 +51,11 @@ export default function Privacy() {
   }, []);
 
   const scrollTo = (id: string) => {
+    setActiveId(id);
+    isClickScrolling.current = true;
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTocOpen(false);
+    setTimeout(() => { isClickScrolling.current = false; }, 1000);
   };
 
   return (
