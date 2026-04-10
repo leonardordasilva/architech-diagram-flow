@@ -42,5 +42,18 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
+  // Reactivate — remove scheduled cancellation, keep subscription active
+  if (action === 'reactivate' && subscriptionId) {
+    const body = new URLSearchParams({ cancel_at_period_end: 'false' })
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${stripeKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    const result = await res.json()
+    if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
+    return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
   return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: corsHeaders })
 })
