@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import {
   CreditCard, Loader2, Clock, Ban, RotateCcw,
-  MoreHorizontal, ArrowLeftRight, Copy, CheckCircle2, AlertCircle, Search,
+  MoreHorizontal, ArrowLeftRight, Copy, CheckCircle2, AlertCircle, Search, RefreshCw,
 } from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -257,6 +257,16 @@ export default function AdminBilling() {
     toast({ title: 'ID Stripe copiado' });
   };
 
+  const handleSync = (subId: string) => {
+    stripeAction.mutate({ action: 'sync-from-stripe', subscriptionId: subId }, {
+      onSuccess: async () => {
+        toast({ title: 'Sincronizado com Stripe' });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
+      },
+      onError: (e) => toast({ title: 'Erro ao sincronizar', description: e.message, variant: 'destructive' }),
+    });
+  };
+
   const activeSubs = subs?.filter((s) => s.status === 'active') ?? [];
   const filteredSubs = search.trim()
     ? subs?.filter((s) => s.email?.toLowerCase().includes(search.toLowerCase()))
@@ -437,7 +447,13 @@ export default function AdminBilling() {
                         Alterar plano
                       </DropdownMenuItem>
                     )}
-                    {subId && isActive && <DropdownMenuSeparator />}
+                    {subId && (
+                      <DropdownMenuItem onClick={() => handleSync(subId)} className="cursor-pointer">
+                        <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                        Sincronizar com Stripe
+                      </DropdownMenuItem>
+                    )}
+                    {subId && <DropdownMenuSeparator />}
                     {subId && (
                       <DropdownMenuItem onClick={() => copyStripeId(subId)} className="cursor-pointer">
                         <Copy className="h-3.5 w-3.5 mr-2" />

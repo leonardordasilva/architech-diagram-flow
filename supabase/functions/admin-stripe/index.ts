@@ -151,5 +151,31 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, subscription: freshSub }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
+  // Sync from Stripe — re-fetch subscription state and update the DB
+  if (action === 'sync-from-stripe' && subscriptionId) {
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Bearer ${stripeKey}` },
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      return new Response(JSON.stringify({ error: err.error?.message ?? 'Failed to fetch subscription' }), { status: res.status, headers: corsHeaders })
+    }
+    const sub = await res.json()
+
+    const toUpdate: Record<string, unknown> = {
+      status: sub.status,
+      cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    }
+    if (sub.current_period_start) toUpdate.current_period_start = new Date(sub.current_period_start * 1000).toISOString()
+    if (sub.current_period_end)   toUpdate.current_period_end   = new Date(sub.current_period_end   * 1000).toISOString()
+
+    await serviceClient
+      .from('subscriptions')
+      .update(toUpdate)
+      .eq('stripe_subscription_id', subscriptionId)
+
+    return new Response(JSON.stringify({ ok: true, subscription: sub }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
   return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: corsHeaders })
 })
