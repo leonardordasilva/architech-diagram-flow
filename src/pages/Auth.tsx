@@ -16,7 +16,11 @@ export default function AuthPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const redirectTo = (location.state as { redirectTo?: string } | null)?.redirectTo;
-  const [view, setView] = useState<AuthView>('login');
+  const [view, setViewRaw] = useState<AuthView>('login');
+  const setView = (v: AuthView) => {
+    if (v === 'signup') { setEmail(''); setPassword(''); setShowPassword(false); }
+    setViewRaw(v);
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
