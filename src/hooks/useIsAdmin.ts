@@ -3,21 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export function useIsAdmin(): { isAdmin: boolean; isLoading: boolean } {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ['isAdmin', user?.id],
     queryFn: async () => {
-      if (!user?.id) return false;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single();
+      if (!user?.id || !session?.access_token) return false;
+
+      const { data, error } = await supabase.functions.invoke('is-admin', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
       if (error) return false;
-      return data?.is_admin === true;
+      return data?.isAdmin === true;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!session?.access_token,
     staleTime: 5 * 60 * 1000,
   });
 
