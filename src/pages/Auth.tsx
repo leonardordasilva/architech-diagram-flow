@@ -78,6 +78,14 @@ export default function AuthPage() {
       }
     } catch (err: unknown) {
       const msg = getErrorMessage(err);
+
+      // If email not confirmed, offer to resend confirmation
+      if (msg === 'Email not confirmed' && view === 'login') {
+        setShowResendConfirmation(true);
+        toast({ title: t('common.error'), description: t('auth.emailNotConfirmed'), variant: 'destructive' });
+        return;
+      }
+
       const msgMap: Record<string, string> = {
         'Invalid login credentials': t('auth.invalidCredentials'),
         'Email not confirmed': t('auth.emailNotConfirmed'),
@@ -86,7 +94,6 @@ export default function AuthPage() {
         'Password should be at least 6 characters': t('auth.passwordTooShort'),
         'For security purposes, you can only request this once every 60 seconds': t('auth.rateLimited'),
       };
-      // I2: Fall back to a generic i18n message instead of leaking raw English API strings
       const translated = msgMap[msg] ?? t('auth.unknownError');
       toast({ title: t('common.error'), description: translated, variant: 'destructive' });
     } finally {
