@@ -9,7 +9,7 @@ export default function DiagramStatusOverlays({ saving }: DiagramStatusOverlaysP
     <>
       <RecoveryBanner />
       {saving && (
-        <div className="absolute top-2 right-2 z-10 rounded-md bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm border border-border">
+        <div className="fixed top-16 right-4 z-50 rounded-md bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm border border-border">
           Salvando…
         </div>
       )}
