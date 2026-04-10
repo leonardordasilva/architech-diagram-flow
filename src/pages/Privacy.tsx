@@ -498,8 +498,8 @@ export default function Privacy() {
                 <div className="pl-11 text-sm leading-relaxed text-muted-foreground space-y-3">
                   <p>
                     {isPt
-                      ? 'Entre em contato para exercer seus direitos ou para qualquer questão sobre privacidade e proteção de dados:'
-                      : 'Contact us to exercise your rights or for any questions about privacy and data protection:'}
+                      ? 'Entre em contato para exercer seus direitos ou para qualquer questão sobre privacidade e proteção de dados pelo e-mail:'
+                      : 'Contact us to exercise your rights or for any questions about privacy and data protection at:'}
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                     <a
