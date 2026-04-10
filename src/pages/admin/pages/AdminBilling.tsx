@@ -289,7 +289,7 @@ export default function AdminBilling() {
           { header: 'Plano / Ciclo', className: 'w-32' },
           { header: 'Status', className: 'w-44' },
           { header: 'Próx. cobrança', className: 'w-32' },
-          { header: 'Ações', className: 'w-56' },
+          { header: 'Cancelamento', className: 'w-56' },
           { header: '', className: 'w-10' },
         ]}
         isLoading={isLoading}
@@ -347,7 +347,7 @@ export default function AdminBilling() {
               <AdminTableCell>
                 {subId && isActive && (
                   <TooltipProvider delayDuration={300}>
-                    <div className="flex gap-1.5 flex-wrap">
+                    <div className="flex gap-1.5 flex-nowrap">
                       {isSoftCancelled ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
