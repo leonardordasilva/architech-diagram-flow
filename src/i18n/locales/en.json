@@ -345,7 +345,10 @@
     "copyOf": "Copy of {{title}}",
     "overLimit": "You have reached the Free plan limit",
     "overLimitDesc": "You have {{count}} diagrams, but the Free plan allows a maximum of {{max}}. Your existing diagrams remain accessible, but you cannot create new ones. Delete some or upgrade.",
-    "overLimitUpgrade": "Upgrade plan"
+    "overLimitUpgrade": "Upgrade plan",
+    "totalCount": "{{count}} diagram(s)",
+    "searchPlaceholder": "Search diagrams...",
+    "noSearchResults": "No diagrams found"
   },
   "sharedDiagram": {
     "loading": "Loading diagram...",
