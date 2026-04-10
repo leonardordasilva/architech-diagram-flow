@@ -123,10 +123,18 @@ Deno.serve(async (req) => {
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
 
-    // Sync DB immediately
+    // Sync DB immediately — include the new current_period_end from Stripe response
+    const periodEnd = result.current_period_end
+      ? new Date(result.current_period_end * 1000).toISOString()
+      : undefined
+
     await serviceClient
       .from('subscriptions')
-      .update({ plan: newPlan, billing_cycle: newCycle })
+      .update({
+        plan: newPlan,
+        billing_cycle: newCycle,
+        ...(periodEnd ? { current_period_end: periodEnd } : {}),
+      })
       .eq('stripe_subscription_id', subscriptionId)
 
     return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
