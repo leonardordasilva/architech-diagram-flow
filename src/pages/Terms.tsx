@@ -26,47 +26,60 @@ export default function Terms() {
   const [showBackTop, setShowBackTop] = useState(false);
   const [tocOpen, setTocOpen]         = useState(false);
   const isClickScrolling = useRef(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
 
   useLayoutEffect(() => {
-    setActiveId('s1');
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    setActiveId('s1');
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    const timeout = setTimeout(() => {
-      if (!mounted) return;
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (isClickScrolling.current) return;
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) setActiveId(entry.target.id);
-          });
-        },
-        { rootMargin: '-10% 0px -70% 0px' },
-      );
-      toc.forEach(({ id }) => {
-        const el = document.getElementById(id);
-        if (el) observer.observe(el);
-      });
-      observerRef.current = observer;
-    }, 500);
-    return () => { mounted = false; clearTimeout(timeout); observerRef.current?.disconnect(); };
+    let frame = 0;
+
+    const updateActiveSection = () => {
+      if (isClickScrolling.current) return;
+
+      const offset = 160;
+      let nextActiveId = toc[0]?.id ?? 's1';
+
+      for (const { id } of toc) {
+        const element = document.getElementById(id);
+        if (!element) continue;
+
+        if (element.getBoundingClientRect().top - offset <= 0) {
+          nextActiveId = id;
+        } else {
+          break;
+        }
+      }
+
+      setActiveId(nextActiveId);
+    };
+
+    const handleViewportChange = () => {
+      setShowBackTop(window.scrollY > 500);
+      cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    handleViewportChange();
+    window.addEventListener('scroll', handleViewportChange, { passive: true });
+    window.addEventListener('resize', handleViewportChange);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
+    };
   }, [isPt]);
-
-  useEffect(() => {
-    const onScroll = () => setShowBackTop(window.scrollY > 500);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   const scrollTo = (id: string) => {
     setActiveId(id);
     isClickScrolling.current = true;
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTocOpen(false);
-    setTimeout(() => { isClickScrolling.current = false; }, 1000);
+    window.setTimeout(() => {
+      isClickScrolling.current = false;
+    }, 400);
   };
 
   return (
