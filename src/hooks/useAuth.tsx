@@ -23,21 +23,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    async function applySession(session: Session | null) {
+      if (!session) {
+        setSession(null);
+        setUser(null);
+        Sentry.setUser(null);
+        return;
+      }
+
+      // Guard: if the profile no longer exists in the DB (e.g. admin deleted the user),
+      // the JWT may still be valid — force sign-out immediately.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        Sentry.setUser(null);
+        return;
+      }
+
       setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      // PRD-0035 T4: identify user in Sentry (UUID only, no PII)
-      Sentry.setUser(session?.user ? { id: session.user.id } : null);
+      setUser(session.user);
+      Sentry.setUser({ id: session.user.id });
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Use setTimeout to avoid Supabase deadlock when calling supabase inside the listener
+      setTimeout(() => { applySession(session).finally(() => setLoading(false)); }, 0);
     });
 
     // R13 fix: restore persisted session instead of destroying it
     const initAuth = async () => {
       const { data: { session: existingSession } } = await supabase.auth.getSession();
-      if (existingSession) {
-        setSession(existingSession);
-        setUser(existingSession.user);
-      }
+      await applySession(existingSession);
       setLoading(false);
     };
 

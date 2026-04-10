@@ -20,7 +20,11 @@ Deno.serve(async (req) => {
   if (!userId) return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: corsHeaders })
 
   try {
-    // Cascade delete
+    // Invalidate all active sessions first — prevents the user from continuing
+    // to use the app on a valid JWT while their data is being removed.
+    await supabase.auth.admin.deleteUser(userId)
+
+    // Cascade delete user data
     await supabase.from('diagram_shares').delete().or(`owner_id.eq.${userId},shared_with_id.eq.${userId}`)
     await supabase.from('diagrams').delete().eq('owner_id', userId)
     await supabase.from('workspace_members').delete().eq('user_id', userId)
@@ -28,7 +32,6 @@ Deno.serve(async (req) => {
     await supabase.from('subscriptions').delete().eq('user_id', userId)
     await supabase.from('ai_requests').delete().eq('user_id', userId)
     await supabase.from('profiles').delete().eq('id', userId)
-    await supabase.auth.admin.deleteUser(userId)
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err) {
