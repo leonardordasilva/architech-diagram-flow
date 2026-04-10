@@ -127,10 +127,17 @@ Deno.serve(async (req) => {
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
 
-    // Sync DB immediately — include the new current_period_end from Stripe response
-    const periodEnd = result.current_period_end
-      ? new Date(result.current_period_end * 1000).toISOString()
-      : undefined
+    // Re-fetch the subscription from Stripe to get the authoritative current_period_end.
+    // The POST response can return stale period data when billing_cycle_anchor is used;
+    // a subsequent GET always reflects the fully-processed state.
+    const refreshRes = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Bearer ${stripeKey}` },
+    })
+    const freshSub = refreshRes.ok ? await refreshRes.json() : result
+
+    // Prefer the re-fetched value; fall back to the POST response value
+    const rawPeriodEnd = freshSub.current_period_end ?? result.current_period_end
+    const periodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000).toISOString() : undefined
 
     await serviceClient
       .from('subscriptions')
@@ -141,7 +148,7 @@ Deno.serve(async (req) => {
       })
       .eq('stripe_subscription_id', subscriptionId)
 
-    return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: true, subscription: freshSub }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: corsHeaders })
