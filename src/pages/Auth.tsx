@@ -22,6 +22,7 @@ export default function AuthPage() {
       setEmail('');
       setPassword('');
       setShowPassword(false);
+      setShowResendConfirmation(false);
     }
     setViewRaw(v);
   };
