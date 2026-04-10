@@ -116,7 +116,7 @@ export async function loadSharedWithMe(userId: string): Promise<
 
   const [{ data: diagrams }, { data: profiles }] = await Promise.all([
     supabase.from('diagrams').select('id, title, updated_at, nodes, edges, owner_id').in('id', diagramIds),
-    supabase.from('profiles').select('id, email').in('id', ownerIds),
+    supabase.rpc('get_profiles_by_ids', { p_ids: ownerIds }),
   ]);
 
   const emailMap = new Map((profiles || []).map((p: { id: string; email: string }) => [p.id, p.email]));
