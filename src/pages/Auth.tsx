@@ -445,6 +445,30 @@ export default function AuthPage() {
               >
                 {view === 'login' && (
                   <>
+                    {showResendConfirmation && (
+                      <div style={{
+                        background: 'rgba(59,130,246,0.08)',
+                        border: '1px solid rgba(59,130,246,0.2)',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
+                        textAlign: 'center',
+                        width: '100%',
+                      }}>
+                        <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 10px', lineHeight: 1.5 }}>
+                          {t('auth.resendConfirmationHint')}
+                        </p>
+                        <button
+                          type="button"
+                          className="auth-btn"
+                          style={{ padding: '10px 16px', fontSize: '13px' }}
+                          disabled={resendLoading}
+                          onClick={handleResendConfirmation}
+                        >
+                          {resendLoading && <Loader2 size={14} className="animate-spin" />}
+                          {t('auth.resendConfirmationBtn')}
+                        </button>
+                      </div>
+                    )}
                     <button type="button" className="auth-text-btn" onClick={() => setView('forgot')}>
                       {t('auth.forgotPasswordLink')}
                     </button>
