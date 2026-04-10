@@ -291,13 +291,22 @@ export default function Terms() {
                     {isPt ? 'Cadastro e Conta' : 'Account Registration'}
                   </h2>
                 </div>
-                <div className="pl-11 text-sm leading-relaxed text-muted-foreground">
-                  <p>
-                    {isPt
-                      ? 'Para usar o serviço, você deve criar uma conta com um endereço de e-mail válido. Você deve ter pelo menos 18 anos de idade. Você é responsável por manter a confidencialidade de sua senha e por todas as atividades realizadas em sua conta. Contas falsas ou criadas por automação podem ser suspensas sem aviso prévio.'
-                      : 'To use the service, you must create an account with a valid email address. You must be at least 18 years old. You are responsible for maintaining the confidentiality of your password and for all activities that occur under your account. Fake accounts or accounts created by automation may be suspended without notice.'}
-                  </p>
-                </div>
+                <ul className="pl-11 text-sm leading-relaxed text-muted-foreground space-y-2.5">
+                  {(isPt ? [
+                    'Para usar o serviço, você deve criar uma conta com um endereço de e-mail válido.',
+                    'Você é responsável por manter a confidencialidade de sua senha e por todas as atividades realizadas em sua conta.',
+                    'Contas falsas ou criadas por automação podem ser suspensas sem aviso prévio.',
+                  ] : [
+                    'To use the service, you must create an account with a valid email address.',
+                    'You are responsible for maintaining the confidentiality of your password and for all activities that occur under your account.',
+                    'Fake accounts or accounts created by automation may be suspended without notice.',
+                  ]).map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/50" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </section>
 
