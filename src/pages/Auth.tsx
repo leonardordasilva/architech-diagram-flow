@@ -18,7 +18,11 @@ export default function AuthPage() {
   const redirectTo = (location.state as { redirectTo?: string } | null)?.redirectTo;
   const [view, setViewRaw] = useState<AuthView>('login');
   const setView = (v: AuthView) => {
-    if (v === 'signup' || v === 'login') { setEmail(''); setPassword(''); setShowPassword(false); }
+    if (v !== 'confirm-email') {
+      setEmail('');
+      setPassword('');
+      setShowPassword(false);
+    }
     setViewRaw(v);
   };
   const [email, setEmail] = useState('');
