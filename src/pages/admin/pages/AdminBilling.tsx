@@ -362,8 +362,8 @@ export default function AdminBilling() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
+                  <SelectItem value="pro" disabled={changePlanTarget?.currentPlan === 'pro'}>Pro</SelectItem>
+                  <SelectItem value="team" disabled={changePlanTarget?.currentPlan === 'team'}>Team</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -397,7 +397,11 @@ export default function AdminBilling() {
             <Button variant="outline" onClick={() => setChangePlanTarget(null)} disabled={isPending}>
               Cancelar
             </Button>
-            <Button onClick={handleChangePlan} disabled={isPending} aria-busy={isPending}>
+            <Button
+              onClick={handleChangePlan}
+              disabled={isPending || (newPlan === changePlanTarget?.currentPlan && newCycle === changePlanTarget?.currentCycle)}
+              aria-busy={isPending}
+            >
               {isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
               {isPending ? 'Alterando...' : 'Confirmar alteração'}
             </Button>
