@@ -235,8 +235,8 @@ export default function Privacy() {
                 <div className="pl-11 text-sm leading-relaxed text-muted-foreground space-y-3">
                   <p>
                     {isPt
-                      ? 'MicroFlow Architect é operado por MicroFlow Tecnologia Ltda. (CNPJ em processo de registro).'
-                      : 'MicroFlow Architect is operated by MicroFlow Tecnologia Ltda. (CNPJ registration in progress).'}
+                      ? 'MicroFlow Architect é operado por LRS Tecnologia Ltda.'
+                      : 'MicroFlow Architect is operated by LRS Tecnologia Ltda.'}
                   </p>
                   <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 flex items-center gap-3">
                     <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
