@@ -454,18 +454,18 @@ export default function Terms() {
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                     <a
-                      href="mailto:suporte@microflow.dev"
+                      href="mailto:lrodriguesdasilva@gmail.com"
                       className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                     >
                       <span className="h-2 w-2 rounded-full bg-primary" />
-                      suporte@microflow.dev
+                      lrodriguesdasilva@gmail.com
                     </a>
                     <a
-                      href="mailto:privacidade@microflow.dev"
+                      href="mailto:lrodriguesdasilva@gmail.com"
                       className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                     >
                       <span className="h-2 w-2 rounded-full bg-primary/60" />
-                      privacidade@microflow.dev
+                      lrodriguesdasilva@gmail.com
                     </a>
                   </div>
                 </div>

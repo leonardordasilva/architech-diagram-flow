@@ -244,8 +244,8 @@ export default function Privacy() {
                       <p className="text-xs font-medium text-foreground">
                         {isPt ? 'Encarregado de Proteção de Dados (DPO)' : 'Data Protection Officer (DPO)'}
                       </p>
-                      <a href="mailto:privacidade@microflow.dev" className="text-xs text-primary hover:underline">
-                        privacidade@microflow.dev
+                      <a href="mailto:lrodriguesdasilva@gmail.com" className="text-xs text-primary hover:underline">
+                        lrodriguesdasilva@gmail.com
                       </a>
                     </div>
                   </div>
@@ -412,8 +412,8 @@ export default function Privacy() {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {isPt ? 'Para exercer seus direitos: ' : 'To exercise your rights: '}
-                    <a href="mailto:privacidade@microflow.dev" className="text-primary hover:underline font-medium">
-                      privacidade@microflow.dev
+                    <a href="mailto:lrodriguesdasilva@gmail.com" className="text-primary hover:underline font-medium">
+                      lrodriguesdasilva@gmail.com
                     </a>
                   </p>
                 </div>
@@ -503,20 +503,20 @@ export default function Privacy() {
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                     <a
-                      href="mailto:privacidade@microflow.dev"
+                      href="mailto:lrodriguesdasilva@gmail.com"
                       className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                     >
                       <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
-                      privacidade@microflow.dev
+                      lrodriguesdasilva@gmail.com
                     </a>
                     <a
-                      href="mailto:suporte@microflow.dev"
+                      href="mailto:lrodriguesdasilva@gmail.com"
                       className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                     >
                       <span className="h-4 w-4 flex items-center justify-center shrink-0">
                         <span className="h-2 w-2 rounded-full bg-primary/60" />
                       </span>
-                      suporte@microflow.dev
+                      lrodriguesdasilva@gmail.com
                     </a>
                   </div>
                 </div>
