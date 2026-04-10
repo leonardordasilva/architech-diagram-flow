@@ -160,17 +160,18 @@ export default function AdminUsers() {
                       <TooltipTrigger asChild>
                         <div className="flex flex-col gap-1 w-fit">
                           <span
-                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider cursor-default"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider cursor-default"
                             style={{ background: planStyle.bg, color: planStyle.text, border: `1px solid ${planStyle.border}` }}
                           >
                             <Lock className="h-2.5 w-2.5 shrink-0" />
                             {u.plan}
+                            {u.billing_cycle && (
+                              <>
+                                <span style={{ opacity: 0.4 }}>·</span>
+                                <span className="font-medium normal-case tracking-normal">{CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}</span>
+                              </>
+                            )}
                           </span>
-                          {u.billing_cycle && (
-                            <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                              {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
-                            </span>
-                          )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[210px] text-center">
@@ -180,10 +181,10 @@ export default function AdminUsers() {
                   </TooltipProvider>
                 ) : (
                   /* Plano editável diretamente */
-                  <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
                     <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
                       <SelectTrigger
-                        className="w-28 h-7 text-xs border-0 cursor-pointer"
+                        className="w-24 h-7 text-xs border-0 cursor-pointer"
                         style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
                       >
                         <SelectValue />
@@ -195,8 +196,8 @@ export default function AdminUsers() {
                       </SelectContent>
                     </Select>
                     {u.billing_cycle && (
-                      <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                        {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
+                      <span className="text-[10px]" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                        · {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
                       </span>
                     )}
                   </div>

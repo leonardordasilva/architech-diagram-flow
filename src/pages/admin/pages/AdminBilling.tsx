@@ -103,19 +103,18 @@ const PLAN_STYLE: Record<string, { bg: string; text: string; border: string }> =
 function PlanBadge({ plan, cycle }: { plan: string; cycle: string | null }) {
   const style = PLAN_STYLE[plan] ?? { bg: 'hsl(var(--admin-accent-muted))', text: 'hsl(var(--admin-accent))', border: 'hsl(var(--admin-border))' };
   return (
-    <div className="flex flex-col gap-0.5">
-      <span
-        className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit"
-        style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}` }}
-      >
-        {plan}
-      </span>
+    <span
+      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider w-fit"
+      style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}` }}
+    >
+      {plan}
       {cycle && (
-        <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-          {CYCLE_LABELS[cycle] ?? cycle}
-        </span>
+        <>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span className="font-medium normal-case tracking-normal">{CYCLE_LABELS[cycle] ?? cycle}</span>
+        </>
       )}
-    </div>
+    </span>
   );
 }
 
