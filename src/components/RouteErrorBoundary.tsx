@@ -54,7 +54,7 @@ export class RouteErrorBoundary extends Component<Props, State> {
           </div>
           <div className="flex gap-3">
             <button
-              className="inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+              className="inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors cursor-pointer"
               onClick={() => this.setState({ hasError: false, errorId: undefined })}
             >
               {i18n.t('common.tryAgain')}

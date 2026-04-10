@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowUp, ShieldCheck, ChevronDown, X } from 'lucide-react';
@@ -20,7 +20,8 @@ const sections = (isPt: boolean) => [
 export default function Privacy() {
   const { i18n } = useTranslation();
   const isPt = i18n.language.startsWith('pt');
-  const toc = sections(isPt);
+  // N3 — stable reference, only recalculates when language changes
+  const toc = useMemo(() => sections(isPt), [isPt]);
 
   const [activeId, setActiveId]       = useState('s1');
   const [showBackTop, setShowBackTop] = useState(false);
@@ -31,6 +32,11 @@ export default function Privacy() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     setActiveId('s1');
   }, []);
+
+  // N4 — reset mobile TOC when language changes
+  useEffect(() => {
+    setTocOpen(false);
+  }, [isPt]);
 
   useEffect(() => {
     let frame = 0;
@@ -70,12 +76,17 @@ export default function Privacy() {
       window.removeEventListener('scroll', handleViewportChange);
       window.removeEventListener('resize', handleViewportChange);
     };
-  }, [isPt]);
+  }, [toc]);
 
+  // I3 — respect prefers-reduced-motion
   const scrollTo = (id: string) => {
     setActiveId(id);
     isClickScrolling.current = true;
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById(id)?.scrollIntoView({
+      behavior: prefersReduced ? 'auto' : 'smooth',
+      block: 'start',
+    });
     setTocOpen(false);
     window.setTimeout(() => {
       isClickScrolling.current = false;

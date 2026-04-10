@@ -49,7 +49,11 @@ const App = () => (
           <BrowserRouter>
             <SuspenseWithTimeout>
               <Routes>
-                <Route path="/" element={<Landing />} />
+                <Route path="/" element={
+                  <RouteErrorBoundary routeName="landing">
+                    <Landing />
+                  </RouteErrorBoundary>
+                } />
                 <Route path="/app" element={
                   <RouteErrorBoundary routeName="canvas">
                     <Index />
@@ -91,8 +95,16 @@ const App = () => (
                     <AcceptInvite />
                   </RouteErrorBoundary>
                 } />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={
+                  <RouteErrorBoundary routeName="terms">
+                    <Terms />
+                  </RouteErrorBoundary>
+                } />
+                <Route path="/privacy" element={
+                  <RouteErrorBoundary routeName="privacy">
+                    <Privacy />
+                  </RouteErrorBoundary>
+                } />
                 <Route path="/admin/*" element={
                   <AdminGuard>
                     <RouteErrorBoundary routeName="admin">

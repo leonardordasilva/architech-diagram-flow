@@ -45,6 +45,9 @@ export default defineConfig(({ mode }) => {
               project: env.SENTRY_PROJECT || "microflow-architect",
               authToken: env.SENTRY_AUTH_TOKEN,
               telemetry: false,
+              sourcemaps: {
+                filesToDeleteAfterUpload: ["./dist/**/*.map"],
+              },
             }),
           ]
         : []),
@@ -66,7 +69,7 @@ export default defineConfig(({ mode }) => {
     },
     worker: { format: "es" as const },
     build: {
-      sourcemap: true,
+      sourcemap: 'hidden',
       rollupOptions: {
         output: {
           manualChunks: {
