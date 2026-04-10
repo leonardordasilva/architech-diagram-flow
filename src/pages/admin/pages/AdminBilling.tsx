@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAdminMutations } from '../hooks/useAdminQuery';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,7 +9,10 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Loader2, Clock, Ban } from 'lucide-react';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell } from '../components/AdminTable';
 
@@ -34,8 +37,9 @@ interface PendingCancel {
 export default function AdminBilling() {
   const [pending, setPending] = useState<PendingCancel | null>(null);
   const { stripeAction } = useAdminMutations();
+  const queryClient = useQueryClient();
 
-  const { data: subs, isLoading } = useQuery({
+  const { data: subs, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'subscriptions'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -56,14 +60,18 @@ export default function AdminBilling() {
       : 'Subscription cancelada imediatamente';
 
     stripeAction.mutate({ action, subscriptionId: pending.subscriptionId }, {
-      onSuccess: () => { toast({ title: successMsg }); setPending(null); },
+      onSuccess: async () => {
+        setPending(null);
+        toast({ title: successMsg });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
+      },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
   };
 
   const activeSubs = subs?.filter((s) => s.status === 'active') ?? [];
-
   const isSoft = pending?.mode === 'soft';
+  const isPending = stripeAction.isPending;
 
   return (
     <div className="space-y-6 admin-animate-in">
@@ -80,10 +88,13 @@ export default function AdminBilling() {
         >
           <CreditCard className="h-5 w-5 text-white" />
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>{activeSubs.length}</p>
           <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>Subscriptions ativas</p>
         </div>
+        {isFetching && !isLoading && (
+          <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+        )}
       </div>
 
       <AdminTable
@@ -133,31 +144,48 @@ export default function AdminBilling() {
             <AdminTableMutedCell mono>{s.stripe_subscription_id ?? '—'}</AdminTableMutedCell>
             <AdminTableCell>
               {s.stripe_subscription_id && s.status === 'active' && !s.cancel_at_period_end && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPending({ subscriptionId: s.stripe_subscription_id!, mode: 'soft' })}
-                    className="px-2 py-1 rounded-lg text-xs font-medium transition-colors"
-                    style={{ background: 'hsl(38 92% 15%)', color: 'hsl(38 92% 65%)' }}
-                    title="Cancela ao fim do período pago"
-                  >
-                    Fim do período
-                  </button>
-                  <button
-                    onClick={() => setPending({ subscriptionId: s.stripe_subscription_id!, mode: 'immediate' })}
-                    className="px-2 py-1 rounded-lg text-xs font-medium transition-colors"
-                    style={{ background: 'hsl(0 63% 15%)', color: 'hsl(0 84% 65%)' }}
-                    title="Cancela imediatamente"
-                  >
-                    Imediato
-                  </button>
-                </div>
+                <TooltipProvider delayDuration={300}>
+                  <div className="flex gap-1.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setPending({ subscriptionId: s.stripe_subscription_id!, mode: 'soft' })}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+                          style={{ background: 'hsl(38 92% 12%)', color: 'hsl(38 92% 62%)', border: '1px solid hsl(38 92% 20%)' }}
+                        >
+                          <Clock className="h-3 w-3 shrink-0" />
+                          Fim do período
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Acesso mantido até {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : 'fim do período'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setPending({ subscriptionId: s.stripe_subscription_id!, mode: 'immediate' })}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                          style={{ background: 'hsl(0 63% 13%)', color: 'hsl(0 84% 62%)', border: '1px solid hsl(0 63% 22%)' }}
+                        >
+                          <Ban className="h-3 w-3 shrink-0" />
+                          Imediato
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="border-red-500/30 bg-red-950 text-red-200">
+                        <p>Perde acesso agora. Ação irreversível.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               )}
             </AdminTableCell>
           </AdminTableRow>
         ))}
       </AdminTable>
 
-      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
+      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o && !isPending) setPending(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -170,12 +198,15 @@ export default function AdminBilling() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>Voltar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirm}
+              onClick={(e) => { e.preventDefault(); handleConfirm(); }}
+              disabled={isPending}
+              aria-busy={isPending}
               className={isSoft ? '' : 'bg-destructive text-destructive-foreground'}
             >
-              {stripeAction.isPending
+              {isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              {isPending
                 ? 'Processando...'
                 : isSoft ? 'Confirmar cancelamento' : 'Cancelar agora'}
             </AlertDialogAction>
