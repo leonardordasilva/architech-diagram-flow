@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       // Enrich with subscription info so the frontend can detect Stripe-managed plans
       const userIds = (data ?? []).map((u: any) => u.id)
       const { data: subs } = userIds.length > 0
-        ? await supabase.from('subscriptions').select('user_id, status, stripe_subscription_id').in('user_id', userIds)
+        ? await supabase.from('subscriptions').select('user_id, status, stripe_subscription_id, billing_cycle').in('user_id', userIds)
         : { data: [] }
       const subMap = Object.fromEntries((subs ?? []).map((s: any) => [s.user_id, s]))
 
@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
         ...u,
         subscription_status: subMap[u.id]?.status ?? null,
         stripe_subscription_id: subMap[u.id]?.stripe_subscription_id ?? null,
+        billing_cycle: subMap[u.id]?.billing_cycle ?? null,
       }))
 
       return new Response(JSON.stringify({ data: enriched, count }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

@@ -18,6 +18,13 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { MoreHorizontal, Search } from 'lucide-react';
+
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  semiannual: 'Semestral',
+  annual: 'Anual',
+};
 import { toast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -131,21 +138,28 @@ export default function AdminUsers() {
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-block">
-                        <Select defaultValue={u.plan} disabled>
-                          <SelectTrigger
-                            className="w-24 h-7 text-xs border-0 opacity-50 cursor-not-allowed"
-                            style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="free">Free</SelectItem>
-                            <SelectItem value="pro">Pro</SelectItem>
-                            <SelectItem value="team">Team</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="inline-block">
+                          <Select defaultValue={u.plan} disabled>
+                            <SelectTrigger
+                              className="w-24 h-7 text-xs border-0 opacity-50 cursor-not-allowed"
+                              style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="free">Free</SelectItem>
+                              <SelectItem value="pro">Pro</SelectItem>
+                              <SelectItem value="team">Team</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </span>
+                        {u.billing_cycle && (
+                          <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                            {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
+                          </span>
+                        )}
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[200px] text-center">
                       <p>Assinatura Stripe ativa. Use a seção Billing para alterar o plano.</p>
@@ -153,19 +167,26 @@ export default function AdminUsers() {
                   </Tooltip>
                 </TooltipProvider>
               ) : (
-                <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
-                  <SelectTrigger
-                    className="w-24 h-7 text-xs border-0"
-                    style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="team">Team</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-0.5">
+                  <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
+                    <SelectTrigger
+                      className="w-24 h-7 text-xs border-0"
+                      style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="team">Team</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {u.billing_cycle && (
+                    <span className="text-[10px] pl-0.5" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                      {CYCLE_LABELS[u.billing_cycle] ?? u.billing_cycle}
+                    </span>
+                  )}
+                </div>
               )}
             </AdminTableCell>
             <AdminTableMutedCell>{new Date(u.created_at).toLocaleDateString('pt-BR')}</AdminTableMutedCell>

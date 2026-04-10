@@ -211,12 +211,19 @@ export default function AdminBilling() {
           return (
             <AdminTableRow key={s.id}>
               <AdminTableCell>
-                <span
-                  className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
-                >
-                  {s.plan}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span
+                    className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider w-fit"
+                    style={{ background: 'hsl(var(--admin-accent-muted))', color: 'hsl(var(--admin-accent))' }}
+                  >
+                    {s.plan}
+                  </span>
+                  {s.billing_cycle && (
+                    <span className="text-[10px]" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                      {CYCLE_LABELS[s.billing_cycle] ?? s.billing_cycle}
+                    </span>
+                  )}
+                </div>
               </AdminTableCell>
               <AdminTableCell>
                 <span

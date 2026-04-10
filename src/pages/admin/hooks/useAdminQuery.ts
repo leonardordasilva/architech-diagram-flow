@@ -16,6 +16,7 @@ export interface AdminUser {
   avatar_url: string | null;
   subscription_status: string | null;
   stripe_subscription_id: string | null;
+  billing_cycle: string | null;
 }
 
 export interface AdminDiagram {
