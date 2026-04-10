@@ -183,7 +183,9 @@ export default function AdminBilling() {
                     className="w-1.5 h-1.5 rounded-full"
                     style={{ background: isActive ? 'hsl(var(--admin-success))' : 'hsl(var(--admin-text-muted))' }}
                   />
-                  {isSoftCancelled ? 'cancela no período' : s.status}
+                  {isSoftCancelled
+                    ? `A ser cancelado em ${s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}`
+                    : s.status}
                 </span>
               </AdminTableCell>
               <AdminTableMutedCell>
