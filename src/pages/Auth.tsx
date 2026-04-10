@@ -22,6 +22,7 @@ export default function AuthPage() {
       setEmail('');
       setPassword('');
       setShowPassword(false);
+      setShowResendConfirmation(false);
     }
     setViewRaw(v);
   };
@@ -29,6 +30,28 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const handleResendConfirmation = async () => {
+    if (!email) return;
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      toast({ title: t('auth.emailSent'), description: t('auth.resendConfirmationSuccess') });
+      setShowResendConfirmation(false);
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      if (msg.includes('once every 60 seconds')) {
+        toast({ title: t('common.error'), description: t('auth.rateLimited'), variant: 'destructive' });
+      } else {
+        toast({ title: t('common.error'), description: t('auth.unknownError'), variant: 'destructive' });
+      }
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +101,14 @@ export default function AuthPage() {
       }
     } catch (err: unknown) {
       const msg = getErrorMessage(err);
+
+      // If email not confirmed, offer to resend confirmation
+      if (msg === 'Email not confirmed' && view === 'login') {
+        setShowResendConfirmation(true);
+        toast({ title: t('common.error'), description: t('auth.emailNotConfirmed'), variant: 'destructive' });
+        return;
+      }
+
       const msgMap: Record<string, string> = {
         'Invalid login credentials': t('auth.invalidCredentials'),
         'Email not confirmed': t('auth.emailNotConfirmed'),
@@ -86,7 +117,6 @@ export default function AuthPage() {
         'Password should be at least 6 characters': t('auth.passwordTooShort'),
         'For security purposes, you can only request this once every 60 seconds': t('auth.rateLimited'),
       };
-      // I2: Fall back to a generic i18n message instead of leaking raw English API strings
       const translated = msgMap[msg] ?? t('auth.unknownError');
       toast({ title: t('common.error'), description: translated, variant: 'destructive' });
     } finally {
@@ -415,6 +445,30 @@ export default function AuthPage() {
               >
                 {view === 'login' && (
                   <>
+                    {showResendConfirmation && (
+                      <div style={{
+                        background: 'rgba(59,130,246,0.08)',
+                        border: '1px solid rgba(59,130,246,0.2)',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
+                        textAlign: 'center',
+                        width: '100%',
+                      }}>
+                        <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 10px', lineHeight: 1.5 }}>
+                          {t('auth.resendConfirmationHint')}
+                        </p>
+                        <button
+                          type="button"
+                          className="auth-btn"
+                          style={{ padding: '10px 16px', fontSize: '13px' }}
+                          disabled={resendLoading}
+                          onClick={handleResendConfirmation}
+                        >
+                          {resendLoading && <Loader2 size={14} className="animate-spin" />}
+                          {t('auth.resendConfirmationBtn')}
+                        </button>
+                      </div>
+                    )}
                     <button type="button" className="auth-text-btn" onClick={() => setView('forgot')}>
                       {t('auth.forgotPasswordLink')}
                     </button>
