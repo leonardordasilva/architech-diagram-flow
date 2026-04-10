@@ -181,6 +181,7 @@ export default function AdminBilling() {
   const [newPlan, setNewPlan] = useState<string>('pro');
   const [newCycle, setNewCycle] = useState<string>('monthly');
   const [search, setSearch] = useState('');
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const { stripeAction } = useAdminMutations();
   const queryClient = useQueryClient();
@@ -258,12 +259,17 @@ export default function AdminBilling() {
   };
 
   const handleSync = (subId: string) => {
+    setSyncingId(subId);
     stripeAction.mutate({ action: 'sync-from-stripe', subscriptionId: subId }, {
       onSuccess: async () => {
+        setSyncingId(null);
         toast({ title: 'Sincronizado com Stripe' });
         await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
       },
-      onError: (e) => toast({ title: 'Erro ao sincronizar', description: e.message, variant: 'destructive' }),
+      onError: (e) => {
+        setSyncingId(null);
+        toast({ title: 'Erro ao sincronizar', description: e.message, variant: 'destructive' });
+      },
     });
   };
 
@@ -436,8 +442,16 @@ export default function AdminBilling() {
               <AdminTableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5 cursor-pointer">
-                      <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-white/5 cursor-pointer"
+                      disabled={syncingId === subId}
+                    >
+                      {syncingId === subId
+                        ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                        : <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                      }
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">

@@ -166,13 +166,18 @@ Deno.serve(async (req) => {
       status: sub.status,
       cancel_at_period_end: sub.cancel_at_period_end ?? false,
     }
-    if (sub.current_period_start) toUpdate.current_period_start = new Date(sub.current_period_start * 1000).toISOString()
-    if (sub.current_period_end)   toUpdate.current_period_end   = new Date(sub.current_period_end   * 1000).toISOString()
+    if (sub.current_period_end) {
+      toUpdate.current_period_end = new Date(sub.current_period_end * 1000).toISOString()
+    }
 
-    await serviceClient
+    const { error: dbError } = await serviceClient
       .from('subscriptions')
       .update(toUpdate)
       .eq('stripe_subscription_id', subscriptionId)
+
+    if (dbError) {
+      return new Response(JSON.stringify({ error: `DB update failed: ${dbError.message}` }), { status: 500, headers: corsHeaders })
+    }
 
     return new Response(JSON.stringify({ ok: true, subscription: sub }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
