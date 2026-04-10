@@ -596,6 +596,14 @@ export type Database = {
       get_diagram_title: { Args: { diagram_id: string }; Returns: string }
       get_my_owner_workspace_ids: { Args: never; Returns: string[] }
       get_my_workspace_ids: { Args: never; Returns: string[] }
+      get_profiles_by_ids: {
+        Args: { p_ids: string[] }
+        Returns: {
+          avatar_url: string
+          email: string
+          id: string
+        }[]
+      }
       get_user_diagram_count: { Args: { p_user_id: string }; Returns: number }
       get_user_plan_limits: {
         Args: { p_user_id: string }
