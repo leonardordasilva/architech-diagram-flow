@@ -25,23 +25,28 @@ export default function Terms() {
   const [activeId, setActiveId]       = useState('s1');
   const [showBackTop, setShowBackTop] = useState(false);
   const [tocOpen, setTocOpen]         = useState(false);
-  const isClickScrolling = useState({ current: false })[0];
+  const observerRef = useState<IntersectionObserver | null>({ current: null } as any)[0] as { current: IntersectionObserver | null };
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isClickScrolling.current) return;
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveId(entry.target.id);
-        });
-      },
-      { rootMargin: '-10% 0px -70% 0px' },
-    );
-    toc.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
+    let mounted = true;
+    const timeout = setTimeout(() => {
+      if (!mounted) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (isClickScrolling.current) return;
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) setActiveId(entry.target.id);
+          });
+        },
+        { rootMargin: '-10% 0px -70% 0px' },
+      );
+      toc.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+      observerRef.current = observer;
+    }, 500);
+    return () => { mounted = false; clearTimeout(timeout); observerRef.current?.disconnect(); };
   }, [isPt]);
 
   useEffect(() => {
