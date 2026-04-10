@@ -21,11 +21,12 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import {
   CreditCard, Loader2, Clock, Ban, RotateCcw,
-  MoreHorizontal, ArrowLeftRight, Copy, CheckCircle2, AlertCircle,
+  MoreHorizontal, ArrowLeftRight, Copy, CheckCircle2, AlertCircle, Search,
 } from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminTable, { AdminTableRow, AdminTableCell, AdminTableMutedCell } from '../components/AdminTable';
 
@@ -179,6 +180,7 @@ export default function AdminBilling() {
   const [changePlanTarget, setChangePlanTarget] = useState<ChangePlanTarget | null>(null);
   const [newPlan, setNewPlan] = useState<string>('pro');
   const [newCycle, setNewCycle] = useState<string>('monthly');
+  const [search, setSearch] = useState('');
 
   const { stripeAction } = useAdminMutations();
   const queryClient = useQueryClient();
@@ -256,6 +258,9 @@ export default function AdminBilling() {
   };
 
   const activeSubs = subs?.filter((s) => s.status === 'active') ?? [];
+  const filteredSubs = search.trim()
+    ? subs?.filter((s) => s.email?.toLowerCase().includes(search.toLowerCase()))
+    : subs;
   const isPending = stripeAction.isPending;
   const dialogConfig = pending ? DIALOG_CONFIG[pending.mode] : null;
 
@@ -283,24 +288,39 @@ export default function AdminBilling() {
         )}
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+        <Input
+          placeholder="Buscar por assinante..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 border-0 text-sm"
+          style={{
+            background: 'hsl(var(--admin-surface))',
+            color: 'hsl(var(--admin-text))',
+            outline: '1px solid hsl(var(--admin-border))',
+          }}
+        />
+      </div>
+
       <AdminTable
         columns={[
           { header: 'Assinante' },
-          { header: 'Plano / Ciclo', className: 'w-32' },
+          { header: 'Plano / Ciclo', className: 'w-36' },
           { header: 'Status', className: 'w-44' },
-          { header: 'Próx. cobrança', className: 'w-32' },
-          { header: 'Cancelamento', className: 'w-56' },
+          { header: 'Próx. cobrança', className: 'w-36 whitespace-nowrap' },
+          { header: 'Cancelamento', className: 'w-60' },
           { header: '', className: 'w-10' },
         ]}
         isLoading={isLoading}
       >
-        {subs?.length === 0 ? (
+        {filteredSubs?.length === 0 ? (
           <tr>
             <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-              Nenhuma subscription encontrada.
+              {search.trim() ? 'Nenhum assinante encontrado para essa busca.' : 'Nenhuma subscription encontrada.'}
             </td>
           </tr>
-        ) : subs?.map((s) => {
+        ) : filteredSubs?.map((s) => {
           const subId = s.stripe_subscription_id;
           const isActive = s.status === 'active';
           const isSoftCancelled = s.cancel_at_period_end || (subId ? softCancelledIds.has(subId) : false);
@@ -369,7 +389,7 @@ export default function AdminBilling() {
                           <TooltipTrigger asChild>
                             <button
                               onClick={() => setPending({ subscriptionId: subId, mode: 'soft' })}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-200 hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 whitespace-nowrap"
                               style={{ background: 'hsl(38 92% 12%)', color: 'hsl(38 92% 62%)', border: '1px solid hsl(38 92% 20%)' }}
                             >
                               <Clock className="h-3 w-3 shrink-0" />
