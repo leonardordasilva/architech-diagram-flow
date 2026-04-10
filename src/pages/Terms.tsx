@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowUp, FileText, ChevronDown, X } from 'lucide-react';
@@ -25,7 +25,8 @@ export default function Terms() {
   const [activeId, setActiveId]       = useState('s1');
   const [showBackTop, setShowBackTop] = useState(false);
   const [tocOpen, setTocOpen]         = useState(false);
-  const observerRef = useState<IntersectionObserver | null>({ current: null } as any)[0] as { current: IntersectionObserver | null };
+  const isClickScrolling = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     let mounted = true;
