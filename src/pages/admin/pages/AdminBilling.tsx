@@ -261,9 +261,15 @@ export default function AdminBilling() {
   const handleSync = (subId: string) => {
     setSyncingId(subId);
     stripeAction.mutate({ action: 'sync-from-stripe', subscriptionId: subId }, {
-      onSuccess: async () => {
+      onSuccess: async (data: any) => {
         setSyncingId(null);
-        toast({ title: 'Sincronizado com Stripe' });
+        const periodEnd = data?.stripe_period_end
+          ? new Date(data.stripe_period_end).toLocaleDateString('pt-BR')
+          : null;
+        toast({
+          title: 'Sincronizado com Stripe',
+          description: periodEnd ? `Próxima cobrança atualizada para ${periodEnd}` : undefined,
+        });
         await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
       },
       onError: (e) => {

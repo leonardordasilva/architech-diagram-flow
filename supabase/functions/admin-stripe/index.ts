@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     })
     if (!res.ok) {
       const err = await res.json()
-      return new Response(JSON.stringify({ error: err.error?.message ?? 'Failed to fetch subscription' }), { status: res.status, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: err.error?.message ?? 'Failed to fetch subscription from Stripe' }), { status: res.status, headers: corsHeaders })
     }
     const sub = await res.json()
 
@@ -166,20 +166,45 @@ Deno.serve(async (req) => {
       status: sub.status,
       cancel_at_period_end: sub.cancel_at_period_end ?? false,
     }
-    if (sub.current_period_end) {
-      toUpdate.current_period_end = new Date(sub.current_period_end * 1000).toISOString()
-    }
+    if (sub.current_period_start) toUpdate.current_period_start = new Date(sub.current_period_start * 1000).toISOString()
+    if (sub.current_period_end)   toUpdate.current_period_end   = new Date(sub.current_period_end   * 1000).toISOString()
 
-    const { error: dbError } = await serviceClient
+    // 1st attempt: update by stripe_subscription_id
+    const { data: bySubId, error: e1 } = await serviceClient
       .from('subscriptions')
       .update(toUpdate)
       .eq('stripe_subscription_id', subscriptionId)
+      .select('id, current_period_end')
 
-    if (dbError) {
-      return new Response(JSON.stringify({ error: `DB update failed: ${dbError.message}` }), { status: 500, headers: corsHeaders })
+    if (e1) {
+      return new Response(JSON.stringify({ error: `DB update error: ${e1.message}` }), { status: 500, headers: corsHeaders })
     }
 
-    return new Response(JSON.stringify({ ok: true, subscription: sub }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (bySubId && bySubId.length > 0) {
+      return new Response(JSON.stringify({ ok: true, updated: bySubId, stripe_period_end: toUpdate.current_period_end }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // 2nd attempt: stripe_subscription_id not in DB — try stripe_customer_id and fix the missing column
+    const customerId = sub.customer as string | undefined
+    if (!customerId) {
+      return new Response(JSON.stringify({ error: `No row found for stripe_subscription_id=${subscriptionId}` }), { status: 404, headers: corsHeaders })
+    }
+
+    const { data: byCustId, error: e2 } = await serviceClient
+      .from('subscriptions')
+      .update({ ...toUpdate, stripe_subscription_id: subscriptionId })
+      .eq('stripe_customer_id', customerId)
+      .select('id, current_period_end')
+
+    if (e2) {
+      return new Response(JSON.stringify({ error: `DB update (by customer) error: ${e2.message}` }), { status: 500, headers: corsHeaders })
+    }
+
+    if (!byCustId || byCustId.length === 0) {
+      return new Response(JSON.stringify({ error: `Subscription not found in DB. stripe_subscription_id=${subscriptionId}, stripe_customer_id=${customerId}` }), { status: 404, headers: corsHeaders })
+    }
+
+    return new Response(JSON.stringify({ ok: true, updated: byCustId, stripe_period_end: toUpdate.current_period_end }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: corsHeaders })
