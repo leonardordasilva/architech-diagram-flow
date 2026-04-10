@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserCircle2, Mail, KeyRound, LogOut, CreditCard } from 'lucide-react';
+import { ArrowLeft, UserCircle2, Mail, KeyRound, LogOut, CreditCard, Shield } from 'lucide-react';
 
 export default function Account() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -42,6 +44,13 @@ export default function Account() {
               <KeyRound className="h-4 w-4" />
               {t('account.resetPassword')}
             </Button>
+
+            {isAdmin && (
+              <Button variant="outline" className="w-full justify-start gap-2 border-primary/30 text-primary" onClick={() => navigate('/admin')}>
+                <Shield className="h-4 w-4" />
+                Área Administrativa
+              </Button>
+            )}
 
             <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate('/billing')}>
               <CreditCard className="h-4 w-4" />
