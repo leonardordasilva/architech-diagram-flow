@@ -460,13 +460,6 @@ export default function Terms() {
                       <span className="h-2 w-2 rounded-full bg-primary" />
                       lrodriguesdasilva@gmail.com
                     </a>
-                    <a
-                      href="mailto:lrodriguesdasilva@gmail.com"
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                    >
-                      <span className="h-2 w-2 rounded-full bg-primary/60" />
-                      lrodriguesdasilva@gmail.com
-                    </a>
                   </div>
                 </div>
               </div>
