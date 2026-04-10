@@ -218,7 +218,24 @@ export default function BillingModal({
             </div>
           )}
 
-          {/* Current plan card */}
+          {/* Current plan card — skeleton while checkout is being verified */}
+          {checkoutProcessing ? (
+            <div className="rounded-xl border-2 border-border bg-card p-5 animate-pulse">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="rounded-lg p-2 bg-muted w-9 h-9" />
+                <div className="space-y-2">
+                  <div className="h-2.5 w-20 rounded bg-muted" />
+                  <div className="h-4 w-16 rounded bg-muted" />
+                </div>
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="h-3 w-40 rounded bg-muted" />
+                <div className="h-3 w-32 rounded bg-muted" />
+                <div className="h-3 w-36 rounded bg-muted" />
+              </div>
+              <div className="h-8 w-36 rounded-md bg-muted" />
+            </div>
+          ) : (
           <div className={`rounded-xl border-2 bg-card p-5 ${planAccent}`}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -302,6 +319,7 @@ export default function BillingModal({
               )}
             </div>
           </div>
+          )}
 
           {/* Usage */}
           <div className="rounded-xl border bg-card p-5">
