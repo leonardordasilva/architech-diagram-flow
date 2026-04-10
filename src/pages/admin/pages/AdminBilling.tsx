@@ -189,7 +189,9 @@ export default function AdminBilling() {
                 </span>
               </AdminTableCell>
               <AdminTableMutedCell>
-                {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}
+                {isActive && !isSoftCancelled && s.current_period_end
+                  ? new Date(s.current_period_end).toLocaleDateString('pt-BR')
+                  : '—'}
               </AdminTableMutedCell>
               <AdminTableMutedCell mono>{subId ?? '—'}</AdminTableMutedCell>
               <AdminTableCell>
