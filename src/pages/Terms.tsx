@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowUp, FileText, ChevronDown, X } from 'lucide-react';
@@ -25,23 +25,29 @@ export default function Terms() {
   const [activeId, setActiveId]       = useState('s1');
   const [showBackTop, setShowBackTop] = useState(false);
   const [tocOpen, setTocOpen]         = useState(false);
-  const isClickScrolling = useState({ current: false })[0];
+  const isClickScrolling = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isClickScrolling.current) return;
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveId(entry.target.id);
-        });
-      },
-      { rootMargin: '-10% 0px -70% 0px' },
-    );
-    toc.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
+    let mounted = true;
+    const timeout = setTimeout(() => {
+      if (!mounted) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (isClickScrolling.current) return;
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) setActiveId(entry.target.id);
+          });
+        },
+        { rootMargin: '-10% 0px -70% 0px' },
+      );
+      toc.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+      observerRef.current = observer;
+    }, 500);
+    return () => { mounted = false; clearTimeout(timeout); observerRef.current?.disconnect(); };
   }, [isPt]);
 
   useEffect(() => {
