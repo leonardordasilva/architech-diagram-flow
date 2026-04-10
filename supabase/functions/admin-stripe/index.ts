@@ -109,11 +109,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Subscription item não encontrado' }), { status: 500, headers: corsHeaders })
     }
 
-    // Swap the price on the existing subscription with proration
+    // Swap the price on the existing subscription.
+    // billing_cycle_anchor=now resets the period immediately so current_period_end
+    // reflects the new cycle length. create_prorations handles credits/charges for
+    // unused time on the old plan.
     const body = new URLSearchParams({
       [`items[0][id]`]: itemId,
       [`items[0][price]`]: priceId,
       proration_behavior: 'create_prorations',
+      billing_cycle_anchor: 'now',
     })
     const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
       method: 'POST',
