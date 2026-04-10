@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   // Service role client to update the DB directly after Stripe calls
   const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
-  const { action, subscriptionId } = await req.json()
+  const { action, subscriptionId, newPlan, newCycle } = await req.json()
 
   // Immediate cancellation — user loses access now
   if (action === 'cancel-subscription' && subscriptionId) {
@@ -30,7 +30,6 @@ Deno.serve(async (req) => {
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
 
-    // Sync DB immediately without waiting for webhook
     await serviceClient
       .from('subscriptions')
       .update({
@@ -57,7 +56,6 @@ Deno.serve(async (req) => {
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
 
-    // Sync DB immediately without waiting for webhook
     await serviceClient
       .from('subscriptions')
       .update({ cancel_at_period_end: true })
@@ -77,10 +75,58 @@ Deno.serve(async (req) => {
     const result = await res.json()
     if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
 
-    // Sync DB immediately without waiting for webhook
     await serviceClient
       .from('subscriptions')
       .update({ cancel_at_period_end: false })
+      .eq('stripe_subscription_id', subscriptionId)
+
+    return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
+  // Change plan — upgrade or downgrade to a different plan/cycle via Stripe price swap
+  if (action === 'change-plan' && subscriptionId && newPlan && newCycle) {
+    const priceEnvKey = `STRIPE_PRICE_${(newPlan as string).toUpperCase()}_${(newCycle as string).toUpperCase()}`
+    const priceId = Deno.env.get(priceEnvKey)
+    if (!priceId) {
+      return new Response(
+        JSON.stringify({ error: `Price ID não configurado para ${newPlan}/${newCycle} (${priceEnvKey})` }),
+        { status: 500, headers: corsHeaders },
+      )
+    }
+
+    // Fetch current subscription to get the subscription item ID
+    const getRes = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Bearer ${stripeKey}` },
+    })
+    if (!getRes.ok) {
+      const err = await getRes.json()
+      return new Response(JSON.stringify({ error: err.error?.message ?? 'Failed to fetch subscription' }), { status: getRes.status, headers: corsHeaders })
+    }
+    const currentSub = await getRes.json()
+    const itemId = currentSub.items?.data?.[0]?.id
+
+    if (!itemId) {
+      return new Response(JSON.stringify({ error: 'Subscription item não encontrado' }), { status: 500, headers: corsHeaders })
+    }
+
+    // Swap the price on the existing subscription with proration
+    const body = new URLSearchParams({
+      [`items[0][id]`]: itemId,
+      [`items[0][price]`]: priceId,
+      proration_behavior: 'create_prorations',
+    })
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${stripeKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    const result = await res.json()
+    if (!res.ok) return new Response(JSON.stringify({ error: result.error?.message ?? 'Stripe error' }), { status: res.status, headers: corsHeaders })
+
+    // Sync DB immediately
+    await serviceClient
+      .from('subscriptions')
+      .update({ plan: newPlan, billing_cycle: newCycle })
       .eq('stripe_subscription_id', subscriptionId)
 
     return new Response(JSON.stringify({ ok: true, subscription: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

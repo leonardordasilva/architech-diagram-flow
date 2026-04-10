@@ -136,7 +136,7 @@ export function useAdminMutations() {
   });
 
   const stripeAction = useMutation({
-    mutationFn: (vars: { action: string; subscriptionId?: string }) =>
+    mutationFn: (vars: { action: string; subscriptionId?: string; newPlan?: string; newCycle?: string }) =>
       adminInvoke('admin-stripe', vars),
     onSuccess: invalidateAll,
   });

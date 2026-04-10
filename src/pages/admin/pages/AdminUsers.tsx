@@ -14,6 +14,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { MoreHorizontal, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
@@ -124,19 +127,46 @@ export default function AdminUsers() {
               </div>
             </AdminTableCell>
             <AdminTableCell>
-              <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
-                <SelectTrigger
-                  className="w-24 h-7 text-xs border-0"
-                  style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="team">Team</SelectItem>
-                </SelectContent>
-              </Select>
+              {u.subscription_status === 'active' && u.plan !== 'free' ? (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block">
+                        <Select defaultValue={u.plan} disabled>
+                          <SelectTrigger
+                            className="w-24 h-7 text-xs border-0 opacity-50 cursor-not-allowed"
+                            style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="free">Free</SelectItem>
+                            <SelectItem value="pro">Pro</SelectItem>
+                            <SelectItem value="team">Team</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                      <p>Assinatura Stripe ativa. Use a seção Billing para alterar o plano.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Select defaultValue={u.plan} onValueChange={(v) => handlePlanChange(u.id, v)}>
+                  <SelectTrigger
+                    className="w-24 h-7 text-xs border-0"
+                    style={{ background: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </AdminTableCell>
             <AdminTableMutedCell>{new Date(u.created_at).toLocaleDateString('pt-BR')}</AdminTableMutedCell>
             <AdminTableCell>

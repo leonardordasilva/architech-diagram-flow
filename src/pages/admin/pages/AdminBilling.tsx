@@ -8,8 +8,18 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { CreditCard, Loader2, Clock, Ban, RotateCcw } from 'lucide-react';
+import { CreditCard, Loader2, Clock, Ban, RotateCcw, MoreHorizontal, ArrowLeftRight } from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
@@ -24,6 +34,7 @@ interface Subscription {
   stripe_subscription_id: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
+  billing_cycle: string | null;
   email?: string;
 }
 
@@ -32,6 +43,12 @@ type ActionMode = 'soft' | 'immediate' | 'reactivate';
 interface PendingAction {
   subscriptionId: string;
   mode: ActionMode;
+}
+
+interface ChangePlanTarget {
+  subscriptionId: string;
+  currentPlan: string;
+  currentCycle: string | null;
 }
 
 const DIALOG_CONFIG: Record<ActionMode, { title: string; description: string; confirmLabel: string; destructive: boolean }> = {
@@ -67,10 +84,20 @@ const SUCCESS_MSG: Record<ActionMode, string> = {
   reactivate: 'Assinatura reativada com sucesso',
 };
 
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'Mensal',
+  quarterly: 'Trimestral',
+  semiannual: 'Semestral',
+  annual: 'Anual',
+};
+
 export default function AdminBilling() {
   const [pending, setPending] = useState<PendingAction | null>(null);
-  // Tracks optimistic soft-cancel state per subscriptionId (cleared on reactivate or after refetch)
   const [softCancelledIds, setSoftCancelledIds] = useState<Set<string>>(new Set());
+  const [changePlanTarget, setChangePlanTarget] = useState<ChangePlanTarget | null>(null);
+  const [newPlan, setNewPlan] = useState<string>('pro');
+  const [newCycle, setNewCycle] = useState<string>('monthly');
+
   const { stripeAction } = useAdminMutations();
   const queryClient = useQueryClient();
 
@@ -94,7 +121,6 @@ export default function AdminBilling() {
     stripeAction.mutate({ action: ACTION_MAP[capturedPending.mode], subscriptionId: capturedPending.subscriptionId }, {
       onSuccess: async () => {
         setPending(null);
-        // Optimistic update: reflect the new state immediately before refetch
         if (capturedPending.mode === 'soft') {
           setSoftCancelledIds((prev) => new Set(prev).add(capturedPending.subscriptionId));
         } else if (capturedPending.mode === 'reactivate') {
@@ -109,6 +135,27 @@ export default function AdminBilling() {
       },
       onError: (e) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
     });
+  };
+
+  const handleChangePlan = () => {
+    if (!changePlanTarget) return;
+    stripeAction.mutate(
+      { action: 'change-plan', subscriptionId: changePlanTarget.subscriptionId, newPlan, newCycle },
+      {
+        onSuccess: async () => {
+          setChangePlanTarget(null);
+          toast({ title: 'Plano alterado com sucesso' });
+          await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
+        },
+        onError: (e) => toast({ title: 'Erro ao alterar plano', description: e.message, variant: 'destructive' }),
+      },
+    );
+  };
+
+  const openChangePlan = (s: Subscription, subId: string) => {
+    setNewPlan(s.plan === 'team' ? 'pro' : 'team');
+    setNewCycle(s.billing_cycle ?? 'monthly');
+    setChangePlanTarget({ subscriptionId: subId, currentPlan: s.plan, currentCycle: s.billing_cycle });
   };
 
   const activeSubs = subs?.filter((s) => s.status === 'active') ?? [];
@@ -146,19 +193,19 @@ export default function AdminBilling() {
           { header: 'Próxima cobrança' },
           { header: 'Stripe ID' },
           { header: 'Cancelamento', className: 'w-56' },
+          { header: '', className: 'w-10' },
         ]}
         isLoading={isLoading}
       >
         {subs?.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
               Nenhuma subscription.
             </td>
           </tr>
         ) : subs?.map((s) => {
           const subId = s.stripe_subscription_id;
           const isActive = s.status === 'active';
-          // Combine DB state with optimistic state
           const isSoftCancelled = s.cancel_at_period_end || (subId ? softCancelledIds.has(subId) : false);
 
           return (
@@ -199,7 +246,6 @@ export default function AdminBilling() {
                   <TooltipProvider delayDuration={300}>
                     <div className="flex gap-1.5">
                       {isSoftCancelled ? (
-                        /* Soft-cancelled: show Desfazer + Imediato */
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -216,7 +262,6 @@ export default function AdminBilling() {
                           </TooltipContent>
                         </Tooltip>
                       ) : (
-                        /* Normal active: show Fim do período */
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -234,7 +279,6 @@ export default function AdminBilling() {
                         </Tooltip>
                       )}
 
-                      {/* Imediato sempre disponível enquanto status === 'active' */}
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
@@ -254,11 +298,31 @@ export default function AdminBilling() {
                   </TooltipProvider>
                 )}
               </AdminTableCell>
+
+              {/* Row actions: change plan */}
+              <AdminTableCell>
+                {subId && isActive && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-white/5">
+                        <MoreHorizontal className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openChangePlan(s, subId)}>
+                        <ArrowLeftRight className="h-3.5 w-3.5 mr-2" />
+                        Alterar plano
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </AdminTableCell>
             </AdminTableRow>
           );
         })}
       </AdminTable>
 
+      {/* Cancel / Reactivate confirmation dialog */}
       <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o && !isPending) setPending(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -279,6 +343,67 @@ export default function AdminBilling() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Change plan dialog */}
+      <Dialog open={!!changePlanTarget} onOpenChange={(o) => { if (!o && !isPending) setChangePlanTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Alterar plano</DialogTitle>
+            <DialogDescription>
+              Selecione o novo plano e ciclo. O cliente será cobrado ou creditado proporcionalmente (proration).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Plano</Label>
+              <Select value={newPlan} onValueChange={setNewPlan}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="team">Team</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Ciclo de cobrança</Label>
+              <Select value={newCycle} onValueChange={setNewCycle}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CYCLE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {changePlanTarget && (
+              <p className="text-xs text-muted-foreground">
+                Plano atual:{' '}
+                <span className="font-medium capitalize">{changePlanTarget.currentPlan}</span>
+                {changePlanTarget.currentCycle && (
+                  <> · {CYCLE_LABELS[changePlanTarget.currentCycle] ?? changePlanTarget.currentCycle}</>
+                )}
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangePlanTarget(null)} disabled={isPending}>
+              Cancelar
+            </Button>
+            <Button onClick={handleChangePlan} disabled={isPending} aria-busy={isPending}>
+              {isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              {isPending ? 'Alterando...' : 'Confirmar alteração'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
