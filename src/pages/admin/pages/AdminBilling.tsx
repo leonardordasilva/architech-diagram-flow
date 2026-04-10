@@ -362,8 +362,8 @@ export default function AdminBilling() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pro" disabled={changePlanTarget?.currentPlan === 'pro'}>Pro</SelectItem>
-                  <SelectItem value="team" disabled={changePlanTarget?.currentPlan === 'team'}>Team</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="team">Team</SelectItem>
                 </SelectContent>
               </Select>
             </div>
