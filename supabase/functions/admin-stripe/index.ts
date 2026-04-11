@@ -135,16 +135,21 @@ Deno.serve(async (req) => {
     })
     const freshSub = refreshRes.ok ? await refreshRes.json() : result
 
-    // Prefer the re-fetched value; fall back to the POST response value
-    const rawPeriodEnd = freshSub.current_period_end ?? result.current_period_end
-    const periodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000).toISOString() : undefined
+    // Prefer the re-fetched value; fall back to the POST response value.
+    // Stripe new billing mode moves current_period_end to items.data[0] — check both.
+    const freshItem = freshSub.items?.data?.[0]
+    const rawPeriodEnd =
+      freshSub.current_period_end   ?? freshItem?.current_period_end ??
+      result.current_period_end     ?? result.items?.data?.[0]?.current_period_end ??
+      null
+    const periodEnd = rawPeriodEnd ? new Date(Number(rawPeriodEnd) * 1000).toISOString() : null
 
     await serviceClient
       .from('subscriptions')
       .update({
         plan: newPlan,
         billing_cycle: newCycle,
-        ...(periodEnd ? { current_period_end: periodEnd } : {}),
+        current_period_end: periodEnd,
       })
       .eq('stripe_subscription_id', subscriptionId)
 
@@ -162,18 +167,26 @@ Deno.serve(async (req) => {
     }
     const sub = await res.json()
 
-    // Log the full raw response so we can inspect any field name discrepancies in Supabase logs
-    console.log('sync-from-stripe stripe response keys:', Object.keys(sub).join(', '))
-    console.log('sync-from-stripe raw period fields:', JSON.stringify({
-      current_period_start: sub.current_period_start,
-      current_period_end: sub.current_period_end,
-      status: sub.status,
+    // Stripe moved current_period_start/end to items.data[0] in the newer billing mode (2024+).
+    // Fall back to the item level if the top-level fields are absent.
+    const firstItem = sub.items?.data?.[0]
+    const rawPeriodStart = sub.current_period_start ?? firstItem?.current_period_start ?? null
+    const rawPeriodEnd   = sub.current_period_end   ?? firstItem?.current_period_end   ?? null
+
+    console.log('sync-from-stripe period resolution:', JSON.stringify({
+      top_level_start: sub.current_period_start,
+      top_level_end:   sub.current_period_end,
+      item_start:      firstItem?.current_period_start,
+      item_end:        firstItem?.current_period_end,
+      resolved_start:  rawPeriodStart,
+      resolved_end:    rawPeriodEnd,
+      status:          sub.status,
       cancel_at_period_end: sub.cancel_at_period_end,
     }))
 
-    // Convert Unix timestamps — Number() coerces string digits that some API versions return
-    const periodStart = sub.current_period_start ? new Date(Number(sub.current_period_start) * 1000).toISOString() : null
-    const periodEnd   = sub.current_period_end   ? new Date(Number(sub.current_period_end)   * 1000).toISOString() : null
+    // Convert Unix timestamps — Number() coerces string digits some API versions return
+    const periodStart = rawPeriodStart ? new Date(Number(rawPeriodStart) * 1000).toISOString() : null
+    const periodEnd   = rawPeriodEnd   ? new Date(Number(rawPeriodEnd)   * 1000).toISOString() : null
 
     // Always write all synced fields — even if null, so stale values get cleared
     const toUpdate: Record<string, unknown> = {
