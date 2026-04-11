@@ -266,9 +266,16 @@ export default function AdminBilling() {
         const periodEnd = data?.stripe_period_end
           ? new Date(data.stripe_period_end).toLocaleDateString('pt-BR')
           : null;
+        // _debug exposes raw Stripe values — shown in toast temporarily to diagnose missing period_end
+        const rawPeriodEnd = data?._debug?.raw_period_end;
+        const debugMsg = rawPeriodEnd != null
+          ? `Stripe raw_period_end: ${rawPeriodEnd} → ${new Date(Number(rawPeriodEnd) * 1000).toLocaleDateString('pt-BR')}`
+          : 'Stripe raw_period_end: nulo/ausente';
         toast({
           title: 'Sincronizado com Stripe',
-          description: periodEnd ? `Próxima cobrança atualizada para ${periodEnd}` : undefined,
+          description: periodEnd
+            ? `Próxima cobrança atualizada para ${periodEnd}`
+            : debugMsg,
         });
         await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
       },
