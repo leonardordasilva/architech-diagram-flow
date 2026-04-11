@@ -162,12 +162,23 @@ Deno.serve(async (req) => {
     }
     const sub = await res.json()
 
+    // Log raw Stripe values for debugging
+    console.log('sync-from-stripe raw values:', JSON.stringify({
+      status: sub.status,
+      cancel_at_period_end: sub.cancel_at_period_end,
+      current_period_start: sub.current_period_start,
+      current_period_end: sub.current_period_end,
+      // also check nested path used in some Stripe SDK versions
+      items_period_end: sub.items?.data?.[0]?.current_period_end,
+    }))
+
     const toUpdate: Record<string, unknown> = {
       status: sub.status,
       cancel_at_period_end: sub.cancel_at_period_end ?? false,
     }
-    if (sub.current_period_start) toUpdate.current_period_start = new Date(sub.current_period_start * 1000).toISOString()
-    if (sub.current_period_end)   toUpdate.current_period_end   = new Date(sub.current_period_end   * 1000).toISOString()
+    // Use != null so that 0 is included (though in practice Stripe always returns epoch > 0)
+    if (sub.current_period_start != null) toUpdate.current_period_start = new Date(Number(sub.current_period_start) * 1000).toISOString()
+    if (sub.current_period_end   != null) toUpdate.current_period_end   = new Date(Number(sub.current_period_end)   * 1000).toISOString()
 
     // 1st attempt: update by stripe_subscription_id
     const { data: bySubId, error: e1 } = await serviceClient
@@ -181,7 +192,7 @@ Deno.serve(async (req) => {
     }
 
     if (bySubId && bySubId.length > 0) {
-      return new Response(JSON.stringify({ ok: true, updated: bySubId, stripe_period_end: toUpdate.current_period_end }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ ok: true, updated: bySubId, stripe_period_end: toUpdate.current_period_end, _debug: { raw_period_end: sub.current_period_end } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // 2nd attempt: stripe_subscription_id not in DB — try stripe_customer_id and fix the missing column
@@ -204,7 +215,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: `Subscription not found in DB. stripe_subscription_id=${subscriptionId}, stripe_customer_id=${customerId}` }), { status: 404, headers: corsHeaders })
     }
 
-    return new Response(JSON.stringify({ ok: true, updated: byCustId, stripe_period_end: toUpdate.current_period_end }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: true, updated: byCustId, stripe_period_end: toUpdate.current_period_end, _debug: { raw_period_end: sub.current_period_end } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: corsHeaders })
