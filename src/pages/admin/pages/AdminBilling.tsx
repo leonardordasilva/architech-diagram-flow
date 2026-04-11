@@ -263,16 +263,20 @@ export default function AdminBilling() {
     stripeAction.mutate({ action: 'sync-from-stripe', subscriptionId: subId }, {
       onSuccess: async (data: any) => {
         setSyncingId(null);
-        const periodEnd = data?.stripe_period_end
-          ? new Date(data.stripe_period_end).toLocaleDateString('pt-BR')
-          : null;
-        // _debug exposes raw Stripe values — shown in toast temporarily to diagnose missing period_end
-        const rawPeriodEnd = data?._debug?.raw_period_end;
-        const debugMsg = rawPeriodEnd != null
-          ? `Stripe raw_period_end: ${rawPeriodEnd} → ${new Date(Number(rawPeriodEnd) * 1000).toLocaleDateString('pt-BR')}`
-          : 'Stripe raw_period_end: nulo/ausente';
-        toast({ title: 'Sincronização com Stripe realizado com sucesso' });
+        const parts: string[] = [];
+        if (data?.stripe_period_end) {
+          parts.push(`Próx. cobrança: ${new Date(data.stripe_period_end).toLocaleDateString('pt-BR')}`);
+        }
+        if (data?.synced_plan) {
+          const cycleLabel = CYCLE_LABELS[data.synced_cycle] ?? data.synced_cycle ?? '';
+          parts.push(`Plano: ${data.synced_plan.toUpperCase()}${cycleLabel ? ` · ${cycleLabel}` : ''}`);
+        }
+        toast({
+          title: 'Sincronizado com Stripe',
+          description: parts.length > 0 ? parts.join(' — ') : undefined,
+        });
         await queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       },
       onError: (e) => {
         setSyncingId(null);

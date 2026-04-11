@@ -188,12 +188,46 @@ Deno.serve(async (req) => {
     const periodStart = rawPeriodStart ? new Date(Number(rawPeriodStart) * 1000).toISOString() : null
     const periodEnd   = rawPeriodEnd   ? new Date(Number(rawPeriodEnd)   * 1000).toISOString() : null
 
+    // Resolve plan + billing_cycle from the active price ID by matching STRIPE_PRICE_* secrets.
+    // Format: STRIPE_PRICE_{PLAN}_{CYCLE} e.g. STRIPE_PRICE_PRO_ANNUAL
+    const activePriceId = firstItem?.price?.id as string | undefined
+    let resolvedPlan: string | null = null
+    let resolvedCycle: string | null = null
+    if (activePriceId) {
+      const plans  = ['PRO', 'TEAM']
+      const cycles = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']
+      outer: for (const plan of plans) {
+        for (const cycle of cycles) {
+          if (Deno.env.get(`STRIPE_PRICE_${plan}_${cycle}`) === activePriceId) {
+            resolvedPlan  = plan.toLowerCase()
+            resolvedCycle = cycle.toLowerCase()
+            break outer
+          }
+        }
+      }
+    }
+
+    console.log('sync-from-stripe plan resolution:', JSON.stringify({
+      active_price_id: activePriceId,
+      resolved_plan: resolvedPlan,
+      resolved_cycle: resolvedCycle,
+    }))
+
     // Always write all synced fields — even if null, so stale values get cleared
     const toUpdate: Record<string, unknown> = {
       status: sub.status,
       cancel_at_period_end: sub.cancel_at_period_end ?? false,
       current_period_start: periodStart,
       current_period_end: periodEnd,
+      // Only overwrite plan/cycle when we successfully matched the price ID
+      ...(resolvedPlan  ? { plan: resolvedPlan }            : {}),
+      ...(resolvedCycle ? { billing_cycle: resolvedCycle }  : {}),
+    }
+
+    // Helper: after updating the subscriptions row, also sync profiles.plan when plan was resolved
+    const syncProfilePlan = async (userId: string) => {
+      if (!resolvedPlan) return
+      await serviceClient.from('profiles').update({ plan: resolvedPlan }).eq('id', userId)
     }
 
     // 1st attempt: update by stripe_subscription_id
@@ -201,19 +235,22 @@ Deno.serve(async (req) => {
       .from('subscriptions')
       .update(toUpdate)
       .eq('stripe_subscription_id', subscriptionId)
-      .select('id, current_period_end')
+      .select('id, user_id, current_period_end')
 
     if (e1) {
       return new Response(JSON.stringify({ error: `DB update error: ${e1.message}` }), { status: 500, headers: corsHeaders })
     }
 
     if (bySubId && bySubId.length > 0) {
+      await syncProfilePlan(bySubId[0].user_id)
       return new Response(
         JSON.stringify({
           ok: true,
           updated: bySubId,
           stripe_period_end: periodEnd,
-          _debug: { raw_period_end: sub.current_period_end, raw_period_start: sub.current_period_start, status: sub.status },
+          synced_plan: resolvedPlan,
+          synced_cycle: resolvedCycle,
+          _debug: { raw_period_end: rawPeriodEnd, active_price_id: activePriceId },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
@@ -229,7 +266,7 @@ Deno.serve(async (req) => {
       .from('subscriptions')
       .update({ ...toUpdate, stripe_subscription_id: subscriptionId })
       .eq('stripe_customer_id', customerId)
-      .select('id, current_period_end')
+      .select('id, user_id, current_period_end')
 
     if (e2) {
       return new Response(JSON.stringify({ error: `DB update (by customer) error: ${e2.message}` }), { status: 500, headers: corsHeaders })
@@ -239,12 +276,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: `Subscription not found in DB. stripe_subscription_id=${subscriptionId}, stripe_customer_id=${customerId}` }), { status: 404, headers: corsHeaders })
     }
 
+    await syncProfilePlan(byCustId[0].user_id)
     return new Response(
       JSON.stringify({
         ok: true,
         updated: byCustId,
         stripe_period_end: periodEnd,
-        _debug: { raw_period_end: sub.current_period_end, raw_period_start: sub.current_period_start, status: sub.status },
+        synced_plan: resolvedPlan,
+        synced_cycle: resolvedCycle,
+        _debug: { raw_period_end: rawPeriodEnd, active_price_id: activePriceId },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
