@@ -1,21 +1,18 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
+import { Button, Section, Text } from 'npm:@react-email/components@0.0.22'
 import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Text,
-} from 'npm:@react-email/components@0.0.22'
+  EmailLayout,
+  FallbackLink,
+  HrDivider,
+  SecurityNotice,
+  styles,
+} from './_layout.tsx'
 
 interface EmailChangeEmailProps {
   siteName: string
+  siteUrl: string
   email: string
   newEmail: string
   confirmationUrl: string
@@ -23,48 +20,63 @@ interface EmailChangeEmailProps {
 
 export const EmailChangeEmail = ({
   siteName,
+  siteUrl,
   email,
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Confirme a alteração de email no {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirme a alteração de email</Heading>
-        <Text style={text}>
-          Você solicitou alterar seu email no {siteName} de{' '}
-          <Link href={`mailto:${email}`} style={link}>
-            {email}
-          </Link>{' '}
-          para{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
-          </Link>
-          .
-        </Text>
-        <Text style={text}>
-          Clique no botão abaixo para confirmar esta alteração:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirmar Alteração
-        </Button>
-        <Text style={footer}>
-          Se você não solicitou esta alteração, proteja sua conta
-          imediatamente.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
+  <EmailLayout
+    siteName={siteName}
+    siteUrl={siteUrl}
+    previewText={`Confirme a alteração de email no ${siteName}`}
+  >
+    <Text style={styles.heading}>Confirme a alteração de email</Text>
+    <Text style={styles.text}>
+      Você solicitou alterar o email da sua conta no{' '}
+      <strong>{siteName}</strong>. Confira os detalhes:
+    </Text>
+
+    <Section style={styles.emailChange}>
+      <Text style={{ margin: 0, fontSize: '13px', color: 'hsl(220, 10%, 50%)' }}>
+        De
+      </Text>
+      <Text style={{ margin: '2px 0 12px', fontSize: '15px', fontWeight: 600 }}>
+        {email}
+      </Text>
+      <Text style={{ margin: 0, fontSize: '13px', color: 'hsl(220, 10%, 50%)' }}>
+        Para
+      </Text>
+      <Text
+        style={{
+          margin: '2px 0 0',
+          fontSize: '15px',
+          fontWeight: 600,
+          color: 'hsl(220, 70%, 50%)',
+        }}
+      >
+        {newEmail}
+      </Text>
+    </Section>
+
+    <Text style={styles.text}>
+      Clique no botão abaixo para confirmar essa alteração:
+    </Text>
+
+    <div style={styles.buttonWrap}>
+      <Button style={styles.button} href={confirmationUrl}>
+        Confirmar alteração
+      </Button>
+    </div>
+
+    <FallbackLink url={confirmationUrl} />
+
+    <HrDivider />
+
+    <SecurityNotice>
+      Se você não solicitou essa alteração, proteja sua conta imediatamente
+      alterando sua senha.
+    </SecurityNotice>
+  </EmailLayout>
 )
 
 export default EmailChangeEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: "'DM Sans', Arial, sans-serif" }
-const container = { padding: '20px 25px' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: 'hsl(220, 25%, 10%)', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: 'hsl(220, 10%, 46%)', lineHeight: '1.5', margin: '0 0 25px' }
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = { backgroundColor: 'hsl(220, 70%, 50%)', color: '#ffffff', fontSize: '14px', borderRadius: '8px', padding: '12px 20px', textDecoration: 'none' }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
