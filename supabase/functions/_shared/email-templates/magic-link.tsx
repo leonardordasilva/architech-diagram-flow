@@ -1,52 +1,57 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
+import { Button, Text } from 'npm:@react-email/components@0.0.22'
 import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from 'npm:@react-email/components@0.0.22'
+  EmailLayout,
+  FallbackLink,
+  HrDivider,
+  SecurityNotice,
+  styles,
+} from './_layout.tsx'
 
 interface MagicLinkEmailProps {
   siteName: string
+  siteUrl: string
   confirmationUrl: string
 }
 
 export const MagicLinkEmail = ({
   siteName,
+  siteUrl,
   confirmationUrl,
 }: MagicLinkEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Seu link de login para {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Seu link de login</Heading>
-        <Text style={text}>
-          Clique no botão abaixo para entrar no {siteName}. Este link expira em breve.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Entrar
-        </Button>
-        <Text style={footer}>
-          Se você não solicitou este link, pode ignorar este email com segurança.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
+  <EmailLayout
+    siteName={siteName}
+    siteUrl={siteUrl}
+    previewText={`Seu link de acesso ao ${siteName}`}
+  >
+    <Text style={styles.heading}>Seu link de acesso</Text>
+    <Text style={styles.text}>
+      Clique no botão abaixo para entrar no <strong>{siteName}</strong> sem
+      precisar digitar sua senha.
+    </Text>
+
+    <div style={styles.buttonWrap}>
+      <Button style={styles.button} href={confirmationUrl}>
+        Entrar agora
+      </Button>
+    </div>
+
+    <Text style={styles.text}>
+      Este link expira em breve por motivos de segurança e só pode ser usado
+      uma vez.
+    </Text>
+
+    <FallbackLink url={confirmationUrl} />
+
+    <HrDivider />
+
+    <SecurityNotice>
+      Se você não solicitou este link de acesso, pode ignorar este email — sua
+      conta continua protegida.
+    </SecurityNotice>
+  </EmailLayout>
 )
 
 export default MagicLinkEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: "'DM Sans', Arial, sans-serif" }
-const container = { padding: '20px 25px' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: 'hsl(220, 25%, 10%)', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: 'hsl(220, 10%, 46%)', lineHeight: '1.5', margin: '0 0 25px' }
-const button = { backgroundColor: 'hsl(220, 70%, 50%)', color: '#ffffff', fontSize: '14px', borderRadius: '8px', padding: '12px 20px', textDecoration: 'none' }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
