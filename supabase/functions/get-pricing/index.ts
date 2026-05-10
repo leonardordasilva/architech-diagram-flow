@@ -31,6 +31,11 @@ serve(async (req) => {
     // 1. Fetch exchange rate (USD to BRL)
     const exchangeRes = await fetch("https://economia.awesomeapi.com.br/last/USD-BRL");
     const exchangeData = await exchangeRes.json();
+    console.log("Exchange Data:", JSON.stringify(exchangeData));
+    
+    if (!exchangeData.USDBRL) {
+      throw new Error(`Invalid exchange data structure: ${JSON.stringify(exchangeData)}`);
+    }
     const rate = parseFloat(exchangeData.USDBRL.bid);
 
     // 2. Map environment variables to price IDs
