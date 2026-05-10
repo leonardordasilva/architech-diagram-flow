@@ -2,20 +2,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Zap, Crown, Users, Loader2, Star } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 import './PricingCards.css';
 
 export type BillingCycle = 'monthly' | 'quarterly' | 'semiannual' | 'annual';
 
-// I9: Prices are display-only labels and must stay in sync with the Stripe product
-// prices configured via STRIPE_PRICE_* environment variables in the edge functions.
-// Update both tables here whenever Stripe prices change.
-const PRICES_BRL: Record<string, Record<BillingCycle, string>> = {
+// Fallback prices (used if Stripe/Edge Function fails)
+const FALLBACK_BRL: Record<string, Record<BillingCycle, string>> = {
   free: { monthly: 'R$ 0', quarterly: 'R$ 0', semiannual: 'R$ 0', annual: 'R$ 0' },
   pro: { monthly: 'R$ 49', quarterly: 'R$ 129', semiannual: 'R$ 219', annual: 'R$ 369' },
   team: { monthly: 'R$ 99', quarterly: 'R$ 259', semiannual: 'R$ 459', annual: 'R$ 759' },
 };
 
-const PRICES_USD: Record<string, Record<BillingCycle, string>> = {
+const FALLBACK_USD: Record<string, Record<BillingCycle, string>> = {
   free: { monthly: '$0', quarterly: '$0', semiannual: '$0', annual: '$0' },
   pro: { monthly: '$9', quarterly: '$24', semiannual: '$42', annual: '$72' },
   team: { monthly: '$19', quarterly: '$51', semiannual: '$90', annual: '$156' },
@@ -99,10 +98,31 @@ export default function PricingCards({
 }: PricingCardsProps) {
   const { t, i18n } = useTranslation();
   const [cycle, setCycle] = useState<BillingCycle>(defaultCycle);
+  const [dynamicPrices, setDynamicPrices] = useState<any>(null);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  useEffect(() => {
+    async function fetchPricing() {
+      setIsLoadingPrices(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-pricing');
+        if (!error && data) {
+          setDynamicPrices(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch dynamic pricing:', err);
+      } finally {
+        setIsLoadingPrices(false);
+      }
+    }
+    fetchPricing();
+  }, []);
+
   const isBRL = i18n.language.startsWith('pt');
-  const prices = isBRL ? PRICES_BRL : PRICES_USD;
+  const prices = isBRL 
+    ? (dynamicPrices?.brl || FALLBACK_BRL) 
+    : (dynamicPrices?.usd || FALLBACK_USD);
 
   // Scroll to pre-selected plan after mount (fallback when not auto-triggering)
   useEffect(() => {
