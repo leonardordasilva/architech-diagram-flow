@@ -29,14 +29,19 @@ serve(async (req) => {
 
   try {
     // 1. Fetch exchange rate (USD to BRL)
-    const exchangeRes = await fetch("https://economia.awesomeapi.com.br/last/USD-BRL");
-    const exchangeData = await exchangeRes.json();
-    console.log("Exchange Data:", JSON.stringify(exchangeData));
-    
-    if (!exchangeData.USDBRL) {
-      throw new Error(`Invalid exchange data structure: ${JSON.stringify(exchangeData)}`);
+    let rate = 5.0; // Default fallback rate
+    try {
+      const exchangeRes = await fetch("https://open.er-api.com/v6/latest/USD");
+      const exchangeData = await exchangeRes.json();
+      if (exchangeData && exchangeData.rates && exchangeData.rates.BRL) {
+        rate = exchangeData.rates.BRL;
+        console.log("Exchange Rate (USD to BRL):", rate);
+      } else {
+        console.warn("Could not fetch exchange rate, using fallback 5.0");
+      }
+    } catch (err) {
+      console.error("Exchange API error:", err);
     }
-    const rate = parseFloat(exchangeData.USDBRL.bid);
 
     // 2. Map environment variables to price IDs
     const priceMap: Record<string, string> = {};
